@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Project PDF</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 30px;
+        }
+        h2 {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .project-details {
+            margin-bottom: 20px;
+        }
+        .project-details div {
+            margin-bottom: 5px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+        }
+        th, td {
+            border: 1px solid #444;
+            padding: 6px;
+            text-align: center;
+        }
+        th {
+            background-color: #eee;
+        }
+    </style>
+</head>
+<body>
+
+    <h2>Duct Measurement Sheet</h2>
+
+    <!-- Project & Client Info -->
+    <div class="project-details">
+        <div><strong>Project Name:</strong> {{ project[1] }}</div>
+        <div><strong>Enquiry No:</strong> {{ project[2] }}</div>
+        <div><strong>Company:</strong> {{ project[3] }}</div>
+        <div><strong>GST No:</strong> {{ project[4] }}</div>
+        <div><strong>Office Contact:</strong> {{ project[5] }}</div>
+        <div><strong>Site Contact:</strong> {{ project[6] }}</div>
+        <div><strong>Site Engineer:</strong> {{ project[7] }}</div>
+        <div><strong>Location:</strong> {{ project[8] }}</div>
+        <div><strong>Floors:</strong> {{ project[9] }}</div>
+        <div><strong>Units:</strong> {{ project[10] }}</div>
+    </div>
+
+    <!-- Duct Table -->
+    <table>
+        <thead>
+            <tr>
+                <th>Duct No</th>
+                <th>Type</th>
+                <th>W1</th>
+                <th>H1</th>
+                <th>W2</th>
+                <th>H2</th>
+                <th>Length/Radius</th>
+                <th>Qty</th>
+                <th>Offset/Degree</th>
+                <th>Gauge</th>
+                <th>Area</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for d in ducts %}
+            <tr>
+                <td>{{ d[2] }}</td>
+                <td>{{ d[3] }}</td>
+                <td>{{ d[4] }}</td>
+                <td>{{ d[5] }}</td>
+                <td>{{ d[6] }}</td>
+                <td>{{ d[7] }}</td>
+                <td>{{ d[8] }}</td>
+                <td>{{ d[9] }}</td>
+                <td>{{ d[10] }}</td>
+                <td>{{ d[11] }}</td>
+                <td>{{ d[12] }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+</body>
+</html>
