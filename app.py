@@ -189,5 +189,3 @@ def submit(project_id):
     flash("Project submitted successfully!")
     return redirect(url_for('duct_entry', project_id=project_id))
 
-if __name__ == '__main__':
-    app.run(debug=True)
