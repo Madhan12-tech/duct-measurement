@@ -1,8 +1,12 @@
 {% extends "base.html" %}
 
-{% block title %}Welcome{% endblock %}
+{% block title %}home| measurement{% endblock %}
 
 {% block content %}
-<h1>Duct Measurement Project</h1>
-<a href="{{ url_for('index') }}" class="btn btn-primary">Start project</a>
+<div class="text-center">
+  <h1 clas="mt-4 mb-3 text-primary">Welcome to the measurement project<h1>
+    <p class="lead">click the button below to get started with a new project</p>
+  
+<a href="/add_project" class="btn btn-success btn-lg mt-3">Add New project</a>
+  </div>
 {% endblock %}
