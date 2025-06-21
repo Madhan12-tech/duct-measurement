@@ -2,6 +2,6 @@ services:
   - type: web
     name: duct-measurement
     env: python
-    buildCommand: ""
-    startCommand: gunicorn main:app
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "gunicorn app:app --bind 0.0.0.0:$PORT"
     autoDeploy: true
