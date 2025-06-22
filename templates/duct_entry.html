@@ -2,54 +2,191 @@
 <html>
 <head>
   <title>Duct Entry</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+    }
+    .form-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+    }
+    .form-group {
+      flex: 1 1 200px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+    }
+    th, td {
+      border: 1px solid #999;
+      padding: 6px;
+      text-align: center;
+    }
+    th {
+      background-color: #eee;
+      position: sticky;
+      top: 0;
+    }
+    .buttons {
+      display: flex;
+      justify-content: flex-end;
+      margin-top: 10px;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .btn {
+      padding: 8px 14px;
+      border: none;
+      background-color: #007bff;
+      color: white;
+      cursor: pointer;
+      border-radius: 6px;
+    }
+    .btn:hover {
+      background-color: #0056b3;
+    }
+    .success-toast {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background-color: #28a745;
+      color: white;
+      padding: 10px 20px;
+      border-radius: 6px;
+      display: none;
+      animation: fadeInOut 4s;
+    }
+    @keyframes fadeInOut {
+      0% {opacity: 0;}
+      10% {opacity: 1;}
+      90% {opacity: 1;}
+      100% {opacity: 0;}
+    }
+    .floating-submit {
+      position: fixed;
+      bottom: 80px;
+      right: 20px;
+      padding: 12px 20px;
+      background: #28a745;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      z-index: 999;
+      display: none;
+    }
+    @media (max-width: 768px) {
+      .floating-submit {
+        display: block;
+      }
+    }
+  </style>
 </head>
-<body style="font-family: Arial; display: flex; padding: 20px; gap: 40px;">
+<body>
 
-  <!-- Left: Duct Entry Form -->
-  <div style="width: 40%;">
-    <h3>Add Duct Entry</h3>
-    <form method="POST" action="/add_duct">
-      <input name="duct_no" placeholder="Duct No" required><br><br>
-      <input name="duct_type" placeholder="Duct Type" required><br><br>
-      <input name="width" placeholder="Width" required><br><br>
-      <input name="height" placeholder="Height" required><br><br>
-      <input name="length_or_radius" placeholder="Length or Radius" required><br><br>
-      <input name="quantity" placeholder="Quantity" required><br><br>
-      <input name="gauge" placeholder="Gauge" required><br><br>
-      <input name="factor" placeholder="Factor (if red/elb/shoe)" value="1"><br><br>
-      <button type="submit">Add Duct</button>
+  <h2>Duct Entry</h2>
+
+  {% with messages = get_flashed_messages() %}
+    {% if messages %}
+      <div class="success-toast" id="toast">{{ messages[0] }} ✔️</div>
+    {% endif %}
+  {% endwith %}
+
+  <form method="POST" action="/add_duct">
+    <input type="hidden" name="id" value="{{ edit_entry[0] if edit_entry else '' }}">
+    <div class="form-container">
+      <div class="form-group">
+        <input type="text" name="duct_no" placeholder="Duct No" value="{{ edit_entry[1] if edit_entry else '' }}" required>
+      </div>
+      <div class="form-group">
+        <input type="text" name="duct_type" placeholder="Type" value="{{ edit_entry[2] if edit_entry else '' }}" required>
+      </div>
+      <div class="form-group">
+        <input type="number" step="0.01" name="width" placeholder="Width" value="{{ edit_entry[3] if edit_entry else '' }}" required>
+      </div>
+      <div class="form-group">
+        <input type="number" step="0.01" name="height" placeholder="Height" value="{{ edit_entry[4] if edit_entry else '' }}" required>
+      </div>
+      <div class="form-group">
+        <input type="number" step="0.01" name="length_or_radius" placeholder="Length/Radius" value="{{ edit_entry[5] if edit_entry else '' }}" required>
+      </div>
+      <div class="form-group">
+        <input type="number" name="quantity" placeholder="Qty" value="{{ edit_entry[6] if edit_entry else '' }}" required>
+      </div>
+      <div class="form-group">
+        <input type="text" name="gauge" placeholder="Gauge" value="{{ edit_entry[7] if edit_entry else '' }}" required>
+      </div>
+      <div class="form-group">
+        <input type="number" step="0.01" name="factor" placeholder="Factor (1.0)" value="{{ edit_entry[8] if edit_entry else 1.0 }}">
+      </div>
+    </div>
+    <br>
+    <button type="submit" class="btn">Save</button>
+  </form>
+
+  <div class="buttons">
+    <form method="GET" action="/export_excel">
+      <button class="btn">Export Excel 📊</button>
     </form>
-
-    {% with messages = get_flashed_messages() %}
-      {% if messages %}
-        <p style="color: green;">{{ messages[0] }}</p>
-      {% endif %}
-    {% endwith %}
+    <form method="GET" action="/export_pdf">
+      <button class="btn">Export PDF 🧾</button>
+    </form>
   </div>
 
-  <!-- Right: Entries Table -->
-  <div style="width: 55%;">
-    <h3>Duct Entries</h3>
-    <table border="1" cellpadding="6" style="width: 100%; border-collapse: collapse;">
+  <table>
+    <thead>
       <tr>
-        <th>ID</th><th>Duct No</th><th>Type</th><th>W×H</th><th>Length</th><th>Qty</th><th>Gauge</th><th>Factor</th><th>Area</th><th>Acc</th>
+        <th>ID</th><th>Duct No</th><th>Type</th><th>W×H</th><th>Len</th><th>Qty</th><th>Gauge</th><th>Factor</th><th>Area</th><th>Acc</th><th>Actions</th>
       </tr>
+    </thead>
+    <tbody>
       {% for e in entries %}
       <tr>
         <td>{{ e[0] }}</td>
         <td>{{ e[1] }}</td>
         <td>{{ e[2] }}</td>
-        <td>{{ e[3] }} × {{ e[4] }}</td>
+        <td>{{ e[3] }}×{{ e[4] }}</td>
         <td>{{ e[5] }}</td>
         <td>{{ e[6] }}</td>
         <td>{{ e[7] }}</td>
         <td>{{ e[8] }}</td>
         <td>{{ e[9] }}</td>
         <td>{{ e[10] }}</td>
+        <td>
+          <a href="/edit/{{ e[0] }}">✏️</a>
+          <a href="/delete/{{ e[0] }}" onclick="return confirm('Delete this entry?')">🗑️</a>
+        </td>
       </tr>
       {% endfor %}
-    </table>
-  </div>
+      <tr style="font-weight:bold; background-color:#f2f2f2;">
+        <td colspan="5" align="right">Total</td>
+        <td>{{ total.total_qty }}</td>
+        <td></td><td></td>
+        <td>{{ total.total_area }}</td>
+        <td>{{ total.total_acc }}</td>
+        <td></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <form method="POST" action="/submit_all">
+    <button type="submit" class="floating-submit">Submit ✔️</button>
+  </form>
+
+  <script>
+    window.onload = () => {
+      const toast = document.getElementById("toast");
+      if (toast) {
+        toast.style.display = "block";
+        setTimeout(() => toast.style.display = "none", 4000);
+      }
+    };
+  </script>
 
 </body>
 </html>
+
