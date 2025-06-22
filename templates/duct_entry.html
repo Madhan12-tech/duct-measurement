@@ -23,25 +23,34 @@
     {% endif %}
   {% endwith %}
 
-  {% if project %}
-    <h2>Project Details</h2>
-    <p><strong>Project:</strong> {{ project[1] }} | <strong>Enquiry No:</strong> {{ project[2] }} | <strong>Office No:</strong> {{ project[3] }}<br>
-       <strong>Engineer:</strong> {{ project[4] }} | <strong>Contact:</strong> {{ project[5] }} | <strong>Location:</strong> {{ project[6] }}</p>
-  {% endif %}
+  <h2>Project Details</h2>
+  <p><strong>Project:</strong> {{ project[1] }} | <strong>Enquiry No:</strong> {{ project[2] }} | <strong>Office No:</strong> {{ project[3] }}<br>
+     <strong>Engineer:</strong> {{ project[4] }} | <strong>Contact:</strong> {{ project[5] }} | <strong>Location:</strong> {{ project[6] }}</p>
 
   <div class="container">
     <div class="form-section">
       <h3>{{ 'Edit Duct Entry' if edit_entry else 'Add Duct Entry' }}</h3>
       <form method="POST" action="/add_duct">
         {% if edit_entry %}<input type="hidden" name="id" value="{{ edit_entry[0] }}">{% endif %}
+
         <input type="text" name="duct_no" placeholder="Duct No" required value="{{ edit_entry[1] if edit_entry else '' }}"><br><br>
-        <input type="text" name="duct_type" placeholder="Duct Type" required value="{{ edit_entry[2] if edit_entry else '' }}"><br><br>
-        <input type="number" step="0.01" name="width" placeholder="Width" required value="{{ edit_entry[3] if edit_entry else '' }}"><br><br>
-        <input type="number" step="0.01" name="height" placeholder="Height" required value="{{ edit_entry[4] if edit_entry else '' }}"><br><br>
-        <input type="number" step="0.01" name="length_or_radius" placeholder="Length/Radius" required value="{{ edit_entry[5] if edit_entry else '' }}"><br><br>
-        <input type="number" name="quantity" placeholder="Quantity" required value="{{ edit_entry[6] if edit_entry else '' }}"><br><br>
-        <input type="text" name="gauge" placeholder="Gauge" required value="{{ edit_entry[7] if edit_entry else '' }}"><br><br>
-        <input type="number" step="0.01" name="factor" placeholder="Factor (default 1)" value="{{ edit_entry[8] if edit_entry else '1.0' }}"><br><br>
+
+        <select name="duct_type" required>
+          <option value="">Select Duct Type</option>
+          {% set types = ['ST', 'SHOE', 'RED', 'OFFSET', 'DUM', 'ELB', 'VANES'] %}
+          {% for t in types %}
+            <option value="{{ t }}" {% if edit_entry and edit_entry[2] == t %}selected{% endif %}>{{ t }}</option>
+          {% endfor %}
+        </select><br><br>
+
+        <input type="number" step="0.01" name="width1" placeholder="Width 1" required value="{{ edit_entry[3] if edit_entry else '' }}"><br><br>
+        <input type="number" step="0.01" name="height1" placeholder="Height 1" required value="{{ edit_entry[4] if edit_entry else '' }}"><br><br>
+        <input type="number" step="0.01" name="width2" placeholder="Width 2" value="{{ edit_entry[5] if edit_entry else '' }}"><br><br>
+        <input type="number" step="0.01" name="height2" placeholder="Height 2" value="{{ edit_entry[6] if edit_entry else '' }}"><br><br>
+        <input type="number" step="0.01" name="length_or_radius" placeholder="Length/Radius" required value="{{ edit_entry[7] if edit_entry else '' }}"><br><br>
+        <input type="number" name="quantity" placeholder="Quantity" required value="{{ edit_entry[8] if edit_entry else '' }}"><br><br>
+        <input type="text" name="degree_or_offset" placeholder="Degree / Offset" value="{{ edit_entry[9] if edit_entry else '' }}"><br><br>
+
         <button type="submit">{{ 'Update' if edit_entry else 'Add' }}</button>
       </form>
     </div>
@@ -50,15 +59,15 @@
       <h3>Duct Entries</h3>
       <table>
         <tr>
-          <th>Duct No</th><th>Type</th><th>Size (W x H)</th><th>Length</th><th>Qty</th><th>Gauge</th><th>Factor</th><th>Area</th><th>Acc</th><th>Action</th>
+          <th>Duct No</th><th>Type</th><th>W1 x H1</th><th>W2 x H2</th><th>Length</th><th>Qty</th><th>Deg/Off</th><th>Action</th>
         </tr>
         {% for e in entries %}
           <tr>
             <td>{{ e[1] }}</td><td>{{ e[2] }}</td>
             <td>{{ e[3] }} x {{ e[4] }}</td>
-            <td>{{ e[5] }}</td><td>{{ e[6] }}</td>
+            <td>{{ e[5] }} x {{ e[6] }}</td>
             <td>{{ e[7] }}</td><td>{{ e[8] }}</td>
-            <td>{{ e[9] }}</td><td>{{ e[10] }}</td>
+            <td>{{ e[9] }}</td>
             <td>
               <a href="/edit/{{ e[0] }}">Edit</a> |
               <a href="/delete/{{ e[0] }}" onclick="return confirm('Delete this entry?');">Delete</a>
@@ -66,9 +75,6 @@
           </tr>
         {% endfor %}
       </table>
-
-      <h4>Totals</h4>
-      <p><strong>Total Qty:</strong> {{ total.total_qty }} | <strong>Total Area:</strong> {{ total.total_area }} | <strong>Total Accessories:</strong> {{ total.total_acc }}</p>
 
       <form method="POST" action="/submit_all">
         <button type="submit">Submit All</button>
@@ -83,4 +89,3 @@
 
 </body>
 </html>
-
