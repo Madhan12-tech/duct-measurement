@@ -51,6 +51,13 @@
         <input type="number" name="quantity" placeholder="Quantity" required value="{{ edit_entry[8] if edit_entry else '' }}"><br><br>
         <input type="text" name="degree_or_offset" placeholder="Degree / Offset" value="{{ edit_entry[9] if edit_entry else '' }}"><br><br>
 
+        <select name="gauge" required>
+          <option value="">Select Gauge</option>
+          {% for g in ['26g', '24g', '22g', '20g', '18g'] %}
+            <option value="{{ g }}" {% if edit_entry and edit_entry[10] == g %}selected{% endif %}>{{ g }}</option>
+          {% endfor %}
+        </select><br><br>
+
         <button type="submit">{{ 'Update' if edit_entry else 'Add' }}</button>
       </form>
     </div>
@@ -59,15 +66,15 @@
       <h3>Duct Entries</h3>
       <table>
         <tr>
-          <th>Duct No</th><th>Type</th><th>W1 x H1</th><th>W2 x H2</th><th>Length</th><th>Qty</th><th>Deg/Off</th><th>Action</th>
+          <th>Duct No</th><th>Type</th><th>W1xH1</th><th>W2xH2</th><th>Length</th><th>Qty</th><th>Gauge</th><th>Area</th><th>Nuts&Bolts</th><th>Cleat</th><th>Gasket</th><th>Corner</th><th>Deg/Off</th><th>Action</th>
         </tr>
         {% for e in entries %}
           <tr>
             <td>{{ e[1] }}</td><td>{{ e[2] }}</td>
-            <td>{{ e[3] }} x {{ e[4] }}</td>
-            <td>{{ e[5] }} x {{ e[6] }}</td>
-            <td>{{ e[7] }}</td><td>{{ e[8] }}</td>
-            <td>{{ e[9] }}</td>
+            <td>{{ e[3] }}x{{ e[4] }}</td><td>{{ e[5] }}x{{ e[6] }}</td>
+            <td>{{ e[7] }}</td><td>{{ e[8] }}</td><td>{{ e[10] }}</td>
+            <td>{{ e[11] }}</td><td>{{ e[12] }}</td><td>{{ e[13] }}</td>
+            <td>{{ e[14] }}</td><td>{{ e[15] }}</td><td>{{ e[9] }}</td>
             <td>
               <a href="/edit/{{ e[0] }}">Edit</a> |
               <a href="/delete/{{ e[0] }}" onclick="return confirm('Delete this entry?');">Delete</a>
