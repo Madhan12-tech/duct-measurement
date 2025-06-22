@@ -42,13 +42,13 @@ def calculate_accessories(area):
 def home():
     return render_template('home.html')
 
-@app.route('/duct_entry')
+@app.route('/duct-entry')
 def duct_entry():
     conn = sqlite3.connect('data.db')
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM duct_entries ORDER BY id DESC")
     entries = cursor.fetchall()
-    
+
     # Totals
     cursor.execute("SELECT SUM(quantity), SUM(area), SUM(accessories) FROM duct_entries")
     total = cursor.fetchone()
@@ -79,14 +79,14 @@ def add_duct():
 
     conn = sqlite3.connect('data.db')
     cursor = conn.cursor()
-    if id:  # Update
+    if id:
         cursor.execute('''
             UPDATE duct_entries SET 
             duct_no=?, duct_type=?, width=?, height=?, length_or_radius=?, quantity=?, gauge=?, factor=?, area=?, accessories=?, timestamp=?
             WHERE id=?
         ''', (duct_no, duct_type, width, height, length, quantity, gauge, factor, area, accessories, datetime.now(), id))
         flash('Duct entry updated!')
-    else:  # New
+    else:
         cursor.execute('''
             INSERT INTO duct_entries 
             (duct_no, duct_type, width, height, length_or_radius, quantity, gauge, factor, area, accessories, timestamp)
@@ -100,17 +100,17 @@ def add_duct():
 @app.route('/edit/<int:id>')
 def edit_duct(id):
     conn = sqlite3.connect('data.db')
-    c = conn.cursor()
-    c.execute("SELECT * FROM duct_entries WHERE id=?", (id,))
-    entry = c.fetchone()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM duct_entries WHERE id=?", (id,))
+    entry = cursor.fetchone()
     conn.close()
     return render_template('duct_entry.html', edit_entry=entry)
 
 @app.route('/delete/<int:id>')
 def delete_duct(id):
     conn = sqlite3.connect('data.db')
-    c = conn.cursor()
-    c.execute("DELETE FROM duct_entries WHERE id=?", (id,))
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM duct_entries WHERE id=?", (id,))
     conn.commit()
     conn.close()
     flash('Duct entry deleted!')
@@ -169,4 +169,3 @@ def export_pdf():
 def submit_all():
     flash(f"All duct entries submitted successfully at {datetime.now().strftime('%H:%M:%S')}")
     return redirect(url_for('duct_entry'))
-
