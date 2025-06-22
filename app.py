@@ -11,6 +11,8 @@ app.secret_key = 'secretkey'
 def init_db():
     conn = sqlite3.connect('data.db')
     c = conn.cursor()
+
+    # Create duct_entries table
     c.execute('''
         CREATE TABLE IF NOT EXISTS duct_entries (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -27,6 +29,21 @@ def init_db():
             timestamp DATETIME
         )
     ''')
+
+    # Create projects table
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS projects (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            project_name TEXT,
+            enquiry_no TEXT,
+            office_no TEXT,
+            site_engineer TEXT,
+            site_contact TEXT,
+            location TEXT,
+            timestamp DATETIME
+        )
+    ''')
+
     conn.commit()
     conn.close()
 
@@ -41,6 +58,29 @@ def calculate_accessories(area):
 @app.route('/')
 def home():
     return render_template('home.html')
+
+@app.route('/save_project', methods=['POST'])
+def save_project():
+    form = request.form
+    project_name = form['project_name']
+    enquiry_no = form['enquiry_no']
+    office_no = form['office_no']
+    site_engineer = form['site_engineer']
+    site_contact = form['site_contact']
+    location = form['location']
+
+    conn = sqlite3.connect('data.db')
+    c = conn.cursor()
+    c.execute('''
+        INSERT INTO projects 
+        (project_name, enquiry_no, office_no, site_engineer, site_contact, location, timestamp)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+    ''', (project_name, enquiry_no, office_no, site_engineer, site_contact, location, datetime.now()))
+    conn.commit()
+    conn.close()
+
+    flash("Project saved successfully!")
+    return redirect(url_for('duct_entry'))
 
 @app.route('/duct-entry')
 def duct_entry():
