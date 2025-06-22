@@ -1,100 +1,152 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8">
   <title>Duct Entry</title>
   <style>
-    .container { display: flex; }
-    .form-section { width: 40%; padding: 20px; }
-    .table-section { width: 60%; padding: 20px; }
-    table { width: 100%; border-collapse: collapse; }
-    th, td { border: 1px solid #ccc; padding: 8px; text-align: center; font-size: 12px; }
-    th { background-color: #f2f2f2; }
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+    }
+    .container {
+      display: flex;
+      gap: 20px;
+    }
+    form {
+      flex: 1;
+    }
+    table {
+      flex: 2;
+      width: 100%;
+      border-collapse: collapse;
+    }
+    th, td {
+      border: 1px solid #999;
+      padding: 8px;
+      text-align: center;
+    }
+    th {
+      background-color: #f2f2f2;
+    }
+    .actions {
+      margin-top: 10px;
+    }
   </style>
 </head>
 <body>
-  <h2>Project and Client Details</h2>
+
+  {% with messages = get_flashed_messages() %}
+    {% if messages %}
+      <ul style="color: green;">
+        {% for message in messages %}
+          <li>{{ message }}</li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+  {% endwith %}
+
+  <h2>Project Information</h2>
   {% if project %}
-    <p><strong>Project:</strong> {{ project[1] }} | <strong>Enquiry No:</strong> {{ project[2] }} | <strong>Office No:</strong> {{ project[3] }} | <strong>Engineer:</strong> {{ project[4] }} | <strong>Contact:</strong> {{ project[5] }} | <strong>Location:</strong> {{ project[6] }}</p>
+    <p><strong>{{ project[1] }}</strong> | Enquiry: {{ project[2] }} | Office: {{ project[3] }} |
+       Engineer: {{ project[4] }} | Contact: {{ project[5] }} | Location: {{ project[6] }}</p>
   {% else %}
-    <p>No project details available.</p>
+    <p>No project information available.</p>
   {% endif %}
 
   <div class="container">
-    <div class="form-section">
-      <h3>Add Duct Entry</h3>
-      <form action="/add_duct" method="POST">
-        <input type="text" name="duct_no" placeholder="Duct No" required><br><br>
-        <select name="duct_type" required>
-          <option value="ST">ST</option>
-          <option value="SHOE">SHOE</option>
-          <option value="RED">RED</option>
-          <option value="OFFSET">OFFSET</option>
-          <option value="DUM">DUM</option>
-          <option value="ELB">ELB</option>
-          <option value="VANES">VANES</option>
-        </select><br><br>
-        <input type="number" step="0.01" name="width1" placeholder="Width 1" required><br><br>
-        <input type="number" step="0.01" name="height1" placeholder="Height 1" required><br><br>
-        <input type="number" step="0.01" name="width2" placeholder="Width 2"><br><br>
-        <input type="number" step="0.01" name="height2" placeholder="Height 2"><br><br>
-        <input type="number" step="0.01" name="length_or_radius" placeholder="Length/Radius" required><br><br>
-        <input type="number" name="quantity" placeholder="Quantity" required><br><br>
-        <input type="number" step="0.01" name="degree_or_offset" placeholder="Degree/Offset"><br><br>
-        <button type="submit">Add</button>
-      </form>
-    </div>
 
-    <div class="table-section">
-      <h3>Duct Entries</h3>
+    <!-- Left: Duct Entry Form -->
+    <form action="/add_duct" method="POST">
+      <h3>Duct Entry</h3>
+      <input type="text" name="duct_no" placeholder="Duct No" required><br><br>
+      <select name="duct_type" required>
+        <option value="">Select Type</option>
+        <option value="ST">ST</option>
+        <option value="SHOE">SHOE</option>
+        <option value="RED">RED</option>
+        <option value="OFFSET">OFFSET</option>
+        <option value="DUM">DUM</option>
+        <option value="ELB">ELB</option>
+        <option value="VANES">VANES</option>
+      </select><br><br>
+      <input type="number" step="any" name="width1" placeholder="Width1 (mm)" required><br><br>
+      <input type="number" step="any" name="height1" placeholder="Height1 (mm)" required><br><br>
+      <input type="number" step="any" name="width2" placeholder="Width2 (mm)"><br><br>
+      <input type="number" step="any" name="height2" placeholder="Height2 (mm)"><br><br>
+      <input type="number" step="any" name="length_or_radius" placeholder="Length/Radius (mm)" required><br><br>
+      <input type="number" name="quantity" placeholder="Quantity" required><br><br>
+      <input type="number" step="any" name="degree_or_offset" placeholder="Degree/Offset (mm)"><br><br>
+      <button type="submit">Add</button>
+    </form>
+
+    <!-- Right: Table of Duct Entries -->
+    <div>
+      <h3>Live Entries</h3>
+      <div class="actions">
+        <form action="/export_excel" method="get" style="display:inline;">
+          <button type="submit">Export to Excel</button>
+        </form>
+        <form action="/export_pdf" method="get" style="display:inline;">
+          <button type="submit">Export to PDF</button>
+        </form>
+        <form action="/submit_all" method="post" style="display:inline;">
+          <button type="submit">Submit All</button>
+        </form>
+      </div>
+      <br>
       <table>
-        <tr>
-          <th>No</th>
-          <th>Type</th>
-          <th>W1</th>
-          <th>H1</th>
-          <th>W2</th>
-          <th>H2</th>
-          <th>L/R</th>
-          <th>Qty</th>
-          <th>D/O</th>
-          <th>Gauge</th>
-          <th>24g</th>
-          <th>22g</th>
-          <th>20g</th>
-          <th>18g</th>
-          <th>Area</th>
-          <th>Nuts & Bolts</th>
-          <th>Cleat</th>
-          <th>Gasket</th>
-          <th>Corner Pieces</th>
-        </tr>
-        {% for e in entries %}
-        <tr>
-          <td>{{ e[1] }}</td>
-          <td>{{ e[2] }}</td>
-          <td>{{ e[3] }}</td>
-          <td>{{ e[4] }}</td>
-          <td>{{ e[5] }}</td>
-          <td>{{ e[6] }}</td>
-          <td>{{ e[7] }}</td>
-          <td>{{ e[8] }}</td>
-          <td>{{ e[9] }}</td>
-          <td>{{ e[10] }}</td>
-          <td>{% if e[10] == '24g' %}{{ e[8] }}{% endif %}</td>
-          <td>{% if e[10] == '22g' %}{{ e[8] }}{% endif %}</td>
-          <td>{% if e[10] == '20g' %}{{ e[8] }}{% endif %}</td>
-          <td>{% if e[10] == '18g' %}{{ e[8] }}{% endif %}</td>
-          <td>{{ '%.2f' % e[11] }}</td>
-          <td>{{ e[12] }}</td>
-          <td>{{ e[13] }}</td>
-          <td>{{ '%.2f' % e[14] }}</td>
-          <td>{{ e[15] }}</td>
-        </tr>
-        {% endfor %}
+        <thead>
+          <tr>
+            <th>No</th>
+            <th>Duct No</th>
+            <th>Type</th>
+            <th>W1</th>
+            <th>H1</th>
+            <th>W2</th>
+            <th>H2</th>
+            <th>Length/Radius</th>
+            <th>Qty</th>
+            <th>Degree/Offset</th>
+            <th>Gauge</th>
+            <th>Area (m²)</th>
+            <th>Nuts & Bolts</th>
+            <th>Cleat</th>
+            <th>Gasket (m)</th>
+            <th>Corner Pieces</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for entry in entries %}
+          <tr>
+            <td>{{ loop.index }}</td>
+            <td>{{ entry[1] }}</td>
+            <td>{{ entry[2] }}</td>
+            <td>{{ entry[3] }}</td>
+            <td>{{ entry[4] }}</td>
+            <td>{{ entry[5] }}</td>
+            <td>{{ entry[6] }}</td>
+            <td>{{ entry[7] }}</td>
+            <td>{{ entry[8] }}</td>
+            <td>{{ entry[9] }}</td>
+            <td>{{ entry[10] }}</td>
+            <td>{{ "%.2f"|format(entry[11]) }}</td>
+            <td>{{ entry[12] }}</td>
+            <td>{{ entry[13] }}</td>
+            <td>{{ "%.2f"|format(entry[14]) }}</td>
+            <td>{{ entry[15] }}</td>
+            <td>
+              <a href="/edit/{{ entry[0] }}">Edit</a> |
+              <a href="/delete/{{ entry[0] }}" onclick="return confirm('Are you sure?')">Delete</a>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
       </table>
     </div>
+
   </div>
+
 </body>
 </html>
+
 
