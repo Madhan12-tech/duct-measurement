@@ -42,7 +42,7 @@ def calculate_accessories(area):
 def home():
     return render_template('home.html')
 
-@app.route('/duct-entry')
+@app.route('/duct_entry')
 def duct_entry():
     conn = sqlite3.connect('data.db')
     cursor = conn.cursor()
