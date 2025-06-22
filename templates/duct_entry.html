@@ -66,15 +66,30 @@
       <h3>Duct Entries</h3>
       <table>
         <tr>
-          <th>Duct No</th><th>Type</th><th>W1xH1</th><th>W2xH2</th><th>Length</th><th>Qty</th><th>Gauge</th><th>Area</th><th>Nuts&Bolts</th><th>Cleat</th><th>Gasket</th><th>Corner</th><th>Deg/Off</th><th>Action</th>
+          <th>Duct No</th><th>Type</th><th>W1xH1</th><th>W2xH2</th><th>Length</th><th>Qty</th><th>Deg/Off</th>
+          <th>Gauge</th><th>26g</th><th>24g</th><th>22g</th><th>20g</th><th>18g</th>
+          <th>Area</th><th>Nuts & Bolts</th><th>Cleat</th><th>Gasket</th><th>Corner Pieces</th><th>Action</th>
         </tr>
         {% for e in entries %}
           <tr>
-            <td>{{ e[1] }}</td><td>{{ e[2] }}</td>
-            <td>{{ e[3] }}x{{ e[4] }}</td><td>{{ e[5] }}x{{ e[6] }}</td>
-            <td>{{ e[7] }}</td><td>{{ e[8] }}</td><td>{{ e[10] }}</td>
-            <td>{{ e[11] }}</td><td>{{ e[12] }}</td><td>{{ e[13] }}</td>
-            <td>{{ e[14] }}</td><td>{{ e[15] }}</td><td>{{ e[9] }}</td>
+            <td>{{ e[1] }}</td>
+            <td>{{ e[2] }}</td>
+            <td>{{ e[3] }}x{{ e[4] }}</td>
+            <td>{{ e[5] }}x{{ e[6] }}</td>
+            <td>{{ e[7] }}</td>
+            <td>{{ e[8] }}</td>
+            <td>{{ e[9] }}</td>
+            <td>{{ e[10] }}</td>
+            <td>{% if e[10] == '26g' %}✓{% endif %}</td>
+            <td>{% if e[10] == '24g' %}✓{% endif %}</td>
+            <td>{% if e[10] == '22g' %}✓{% endif %}</td>
+            <td>{% if e[10] == '20g' %}✓{% endif %}</td>
+            <td>{% if e[10] == '18g' %}✓{% endif %}</td>
+            <td>{{ e[11] }}</td>
+            <td>{{ e[12] }}</td>
+            <td>{{ e[13] }}</td>
+            <td>{{ e[14] }}</td>
+            <td>{{ e[15] }}</td>
             <td>
               <a href="/edit/{{ e[0] }}">Edit</a> |
               <a href="/delete/{{ e[0] }}" onclick="return confirm('Delete this entry?');">Delete</a>
