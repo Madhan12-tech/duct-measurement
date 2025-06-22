@@ -3,11 +3,53 @@
 <head>
   <title>Duct Entry</title>
 </head>
-<body style="font-family: Arial; padding: 20px;">
-  <h2>Duct Entry Page</h2>
-  <p>Project saved successfully!</p>
+<body style="font-family: Arial; display: flex; padding: 20px; gap: 40px;">
 
-  <p>Here you can add duct entries and see table...</p>
-  <!-- You can replace this later with the full duct form/table -->
+  <!-- Left: Duct Entry Form -->
+  <div style="width: 40%;">
+    <h3>Add Duct Entry</h3>
+    <form method="POST" action="/add_duct">
+      <input name="duct_no" placeholder="Duct No" required><br><br>
+      <input name="duct_type" placeholder="Duct Type" required><br><br>
+      <input name="width" placeholder="Width" required><br><br>
+      <input name="height" placeholder="Height" required><br><br>
+      <input name="length_or_radius" placeholder="Length or Radius" required><br><br>
+      <input name="quantity" placeholder="Quantity" required><br><br>
+      <input name="gauge" placeholder="Gauge" required><br><br>
+      <input name="factor" placeholder="Factor (if red/elb/shoe)" value="1"><br><br>
+      <button type="submit">Add Duct</button>
+    </form>
+
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}
+        <p style="color: green;">{{ messages[0] }}</p>
+      {% endif %}
+    {% endwith %}
+  </div>
+
+  <!-- Right: Entries Table -->
+  <div style="width: 55%;">
+    <h3>Duct Entries</h3>
+    <table border="1" cellpadding="6" style="width: 100%; border-collapse: collapse;">
+      <tr>
+        <th>ID</th><th>Duct No</th><th>Type</th><th>W×H</th><th>Length</th><th>Qty</th><th>Gauge</th><th>Factor</th><th>Area</th><th>Acc</th>
+      </tr>
+      {% for e in entries %}
+      <tr>
+        <td>{{ e[0] }}</td>
+        <td>{{ e[1] }}</td>
+        <td>{{ e[2] }}</td>
+        <td>{{ e[3] }} × {{ e[4] }}</td>
+        <td>{{ e[5] }}</td>
+        <td>{{ e[6] }}</td>
+        <td>{{ e[7] }}</td>
+        <td>{{ e[8] }}</td>
+        <td>{{ e[9] }}</td>
+        <td>{{ e[10] }}</td>
+      </tr>
+      {% endfor %}
+    </table>
+  </div>
+
 </body>
 </html>
