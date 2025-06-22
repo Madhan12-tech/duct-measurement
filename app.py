@@ -180,4 +180,3 @@ def delete_duct(id):
 def submit_all():
     flash('All duct entries submitted successfully!')
     return redirect(url_for('home'))
-
