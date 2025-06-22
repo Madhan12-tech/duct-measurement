@@ -1,57 +1,47 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+  <meta charset="UTF-8">
   <title>Duct Entry</title>
   <style>
-    .container { display: flex; gap: 20px; }
-    .form-section { width: 40%; }
-    .table-section { width: 60%; }
+    .container { display: flex; }
+    .form-section { width: 40%; padding: 20px; }
+    .table-section { width: 60%; padding: 20px; }
     table { width: 100%; border-collapse: collapse; }
-    th, td { border: 1px solid #ccc; padding: 6px; text-align: center; }
-    th { background-color: #eee; }
+    th, td { border: 1px solid #ccc; padding: 8px; text-align: center; font-size: 12px; }
+    th { background-color: #f2f2f2; }
   </style>
 </head>
-<body style="font-family: Arial; padding: 20px;">
-
-  {% with messages = get_flashed_messages() %}
-    {% if messages %}
-      <ul>
-        {% for msg in messages %}
-          <li>{{ msg }}</li>
-        {% endfor %}
-      </ul>
-    {% endif %}
-  {% endwith %}
-
-  <h2>Project Details</h2>
-  <p><strong>Project:</strong> {{ project[1] }} | <strong>Enquiry No:</strong> {{ project[2] }} | <strong>Office No:</strong> {{ project[3] }}<br>
-     <strong>Engineer:</strong> {{ project[4] }} | <strong>Contact:</strong> {{ project[5] }} | <strong>Location:</strong> {{ project[6] }}</p>
+<body>
+  <h2>Project and Client Details</h2>
+  {% if project %}
+    <p><strong>Project:</strong> {{ project[1] }} | <strong>Enquiry No:</strong> {{ project[2] }} | <strong>Office No:</strong> {{ project[3] }} | <strong>Engineer:</strong> {{ project[4] }} | <strong>Contact:</strong> {{ project[5] }} | <strong>Location:</strong> {{ project[6] }}</p>
+  {% else %}
+    <p>No project details available.</p>
+  {% endif %}
 
   <div class="container">
     <div class="form-section">
-      <h3>{{ 'Edit Duct Entry' if edit_entry else 'Add Duct Entry' }}</h3>
-      <form method="POST" action="/add_duct">
-        {% if edit_entry %}<input type="hidden" name="id" value="{{ edit_entry[0] }}">{% endif %}
-
-        <input type="text" name="duct_no" placeholder="Duct No" required value="{{ edit_entry[1] if edit_entry else '' }}"><br><br>
-
+      <h3>Add Duct Entry</h3>
+      <form action="/add_duct" method="POST">
+        <input type="text" name="duct_no" placeholder="Duct No" required><br><br>
         <select name="duct_type" required>
-          <option value="">Select Duct Type</option>
-          {% set types = ['ST', 'SHOE', 'RED', 'OFFSET', 'DUM', 'ELB', 'VANES'] %}
-          {% for t in types %}
-            <option value="{{ t }}" {% if edit_entry and edit_entry[2] == t %}selected{% endif %}>{{ t }}</option>
-          {% endfor %}
+          <option value="ST">ST</option>
+          <option value="SHOE">SHOE</option>
+          <option value="RED">RED</option>
+          <option value="OFFSET">OFFSET</option>
+          <option value="DUM">DUM</option>
+          <option value="ELB">ELB</option>
+          <option value="VANES">VANES</option>
         </select><br><br>
-
-        <input type="number" step="0.01" name="width1" placeholder="Width 1" required value="{{ edit_entry[3] if edit_entry else '' }}"><br><br>
-        <input type="number" step="0.01" name="height1" placeholder="Height 1" required value="{{ edit_entry[4] if edit_entry else '' }}"><br><br>
-        <input type="number" step="0.01" name="width2" placeholder="Width 2" value="{{ edit_entry[5] if edit_entry else '' }}"><br><br>
-        <input type="number" step="0.01" name="height2" placeholder="Height 2" value="{{ edit_entry[6] if edit_entry else '' }}"><br><br>
-        <input type="number" step="0.01" name="length_or_radius" placeholder="Length/Radius" required value="{{ edit_entry[7] if edit_entry else '' }}"><br><br>
-        <input type="number" name="quantity" placeholder="Quantity" required value="{{ edit_entry[8] if edit_entry else '' }}"><br><br>
-        <input type="text" name="degree_or_offset" placeholder="Degree / Offset" value="{{ edit_entry[9] if edit_entry else '' }}"><br><br>
-
-        <button type="submit">{{ 'Update' if edit_entry else 'Add' }}</button>
+        <input type="number" step="0.01" name="width1" placeholder="Width 1" required><br><br>
+        <input type="number" step="0.01" name="height1" placeholder="Height 1" required><br><br>
+        <input type="number" step="0.01" name="width2" placeholder="Width 2"><br><br>
+        <input type="number" step="0.01" name="height2" placeholder="Height 2"><br><br>
+        <input type="number" step="0.01" name="length_or_radius" placeholder="Length/Radius" required><br><br>
+        <input type="number" name="quantity" placeholder="Quantity" required><br><br>
+        <input type="number" step="0.01" name="degree_or_offset" placeholder="Degree/Offset"><br><br>
+        <button type="submit">Add</button>
       </form>
     </div>
 
@@ -59,51 +49,52 @@
       <h3>Duct Entries</h3>
       <table>
         <tr>
-          <th>Duct No</th><th>Type</th>
-          <th>Width1</th><th>Height1</th><th>Width2</th><th>Height2</th>
-          <th>Length</th><th>Qty</th><th>Deg/Off</th>
-          <th>Gauge</th><th>24g</th><th>22g</th><th>20g</th><th>18g</th>
-          <th>Area</th><th>Nuts & Bolts</th><th>Cleat</th><th>Gasket</th><th>Corner Pieces</th><th>Action</th>
+          <th>No</th>
+          <th>Type</th>
+          <th>W1</th>
+          <th>H1</th>
+          <th>W2</th>
+          <th>H2</th>
+          <th>L/R</th>
+          <th>Qty</th>
+          <th>D/O</th>
+          <th>Gauge</th>
+          <th>24g</th>
+          <th>22g</th>
+          <th>20g</th>
+          <th>18g</th>
+          <th>Area</th>
+          <th>Nuts & Bolts</th>
+          <th>Cleat</th>
+          <th>Gasket</th>
+          <th>Corner Pieces</th>
         </tr>
         {% for e in entries %}
-          <tr>
-            <td>{{ e.duct_no }}</td>
-            <td>{{ e.duct_type }}</td>
-            <td>{{ e.width1 }}</td>
-            <td>{{ e.height1 }}</td>
-            <td>{{ e.width2 }}</td>
-            <td>{{ e.height2 }}</td>
-            <td>{{ e.length_or_radius }}</td>
-            <td>{{ e.quantity }}</td>
-            <td>{{ e.degree_or_offset }}</td>
-            <td>{{ e.gauge }}</td>
-            <td>{{ '✓' if e.gauge == '24g' else '' }}</td>
-            <td>{{ '✓' if e.gauge == '22g' else '' }}</td>
-            <td>{{ '✓' if e.gauge == '20g' else '' }}</td>
-            <td>{{ '✓' if e.gauge == '18g' else '' }}</td>
-            <td>{{ e.area }}</td>
-            <td>{{ e.nuts_bolts }}</td>
-            <td>{{ e.cleat }}</td>
-            <td>{{ e.gasket }}</td>
-            <td>{{ e.corner_pieces }}</td>
-            <td>
-              <a href="/edit/{{ e.id }}">Edit</a> |
-              <a href="/delete/{{ e.id }}" onclick="return confirm('Delete this entry?');">Delete</a>
-            </td>
-          </tr>
+        <tr>
+          <td>{{ e[1] }}</td>
+          <td>{{ e[2] }}</td>
+          <td>{{ e[3] }}</td>
+          <td>{{ e[4] }}</td>
+          <td>{{ e[5] }}</td>
+          <td>{{ e[6] }}</td>
+          <td>{{ e[7] }}</td>
+          <td>{{ e[8] }}</td>
+          <td>{{ e[9] }}</td>
+          <td>{{ e[10] }}</td>
+          <td>{% if e[10] == '24g' %}{{ e[8] }}{% endif %}</td>
+          <td>{% if e[10] == '22g' %}{{ e[8] }}{% endif %}</td>
+          <td>{% if e[10] == '20g' %}{{ e[8] }}{% endif %}</td>
+          <td>{% if e[10] == '18g' %}{{ e[8] }}{% endif %}</td>
+          <td>{{ '%.2f' % e[11] }}</td>
+          <td>{{ e[12] }}</td>
+          <td>{{ e[13] }}</td>
+          <td>{{ '%.2f' % e[14] }}</td>
+          <td>{{ e[15] }}</td>
+        </tr>
         {% endfor %}
       </table>
-
-      <form method="POST" action="/submit_all">
-        <button type="submit">Submit All</button>
-      </form>
-
-      <p style="margin-top: 10px;">
-        <a href="/export_excel">Download Excel</a> |
-        <a href="/export_pdf">Download PDF</a>
-      </p>
     </div>
   </div>
-
 </body>
 </html>
+
