@@ -63,6 +63,7 @@ def duct_entry():
     return render_template('duct_entry.html')
 
 # ✅ Only run init_db and app locally
-if _name_ == '_main_':
+app = Flask(__name__)
+
     init_db()
     app.run(debug=True)
