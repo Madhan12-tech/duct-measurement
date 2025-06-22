@@ -1,6 +1,9 @@
+xlsxwriter
 Flask
 gunicorn
 Flask
 gunicorn
 reportlab
 openpyxl
+Flask
+reportlab
