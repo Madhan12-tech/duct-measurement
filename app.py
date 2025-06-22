@@ -6,6 +6,7 @@ from datetime import datetime
 app = Flask(__name__)
 app.secret_key = 'secretkey'
 
+# Function to create the database table
 def init_db():
     conn = sqlite3.connect('data.db')
     cursor = conn.cursor()
@@ -23,6 +24,9 @@ def init_db():
     ''')
     conn.commit()
     conn.close()
+
+# Run init_db immediately so it works on Render
+init_db()
 
 @app.route('/')
 def home():
@@ -56,6 +60,4 @@ def duct_entry():
     return render_template('duct_entry.html')
 
 if __name__ == '__main__':
-    init_db()
     app.run(debug=True)
-
