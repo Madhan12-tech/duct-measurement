@@ -55,13 +55,19 @@ def init_db():
 init_db()
 
 @app.route('/')
+def index():
+    return render_template('home.html')
+
+@app.route('/home')
 def home():
     conn = sqlite3.connect('data.db')
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM projects ORDER BY id DESC LIMIT 1")
     project = cursor.fetchone()
+    cursor.execute("SELECT * FROM duct_entries ORDER BY id DESC")
+    entries = cursor.fetchall()
     conn.close()
-    return render_template('duct_entry.html', project=project)
+    return render_template('duct_entry.html', project=project, entries=entries)
 
 @app.route('/save_project', methods=['POST'])
 def save_project():
@@ -98,7 +104,6 @@ def add_duct():
     quantity = int(form['quantity'])
     degree_or_offset = float(form['degree_or_offset'] or 0)
 
-    # Gauge logic
     size_sum = width1 + height1
     if size_sum <= 750:
         gauge = '24g'
@@ -109,7 +114,6 @@ def add_duct():
     else:
         gauge = '18g'
 
-    # Area calculation
     if duct_type == 'ST':
         area = 2 * (width1 / 1000 + height1 / 1000) * (length_or_radius / 1000) * quantity
     elif duct_type == 'RED':
@@ -127,7 +131,6 @@ def add_duct():
     else:
         area = 0
 
-    # Other calculations
     if gauge == '24g': cleat = quantity * 4
     elif gauge == '22g': cleat = quantity * 8
     elif gauge == '20g': cleat = quantity * 10
@@ -177,3 +180,4 @@ def delete_duct(id):
 def submit_all():
     flash('All duct entries submitted successfully!')
     return redirect(url_for('home'))
+
