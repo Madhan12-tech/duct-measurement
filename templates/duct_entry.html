@@ -51,13 +51,6 @@
         <input type="number" name="quantity" placeholder="Quantity" required value="{{ edit_entry[8] if edit_entry else '' }}"><br><br>
         <input type="text" name="degree_or_offset" placeholder="Degree / Offset" value="{{ edit_entry[9] if edit_entry else '' }}"><br><br>
 
-        <select name="gauge" required>
-          <option value="">Select Gauge</option>
-          {% for g in ['26g', '24g', '22g', '20g', '18g'] %}
-            <option value="{{ g }}" {% if edit_entry and edit_entry[10] == g %}selected{% endif %}>{{ g }}</option>
-          {% endfor %}
-        </select><br><br>
-
         <button type="submit">{{ 'Update' if edit_entry else 'Add' }}</button>
       </form>
     </div>
@@ -67,32 +60,31 @@
       <table>
         <tr>
           <th>Duct No</th><th>Type</th><th>W1xH1</th><th>W2xH2</th><th>Length</th><th>Qty</th><th>Deg/Off</th>
-          <th>Gauge</th><th>26g</th><th>24g</th><th>22g</th><th>20g</th><th>18g</th>
+          <th>Gauge</th><th>24g</th><th>22g</th><th>20g</th><th>18g</th>
           <th>Area</th><th>Nuts & Bolts</th><th>Cleat</th><th>Gasket</th><th>Corner Pieces</th><th>Action</th>
         </tr>
         {% for e in entries %}
           <tr>
-            <td>{{ e[1] }}</td>
-            <td>{{ e[2] }}</td>
-            <td>{{ e[3] }}x{{ e[4] }}</td>
-            <td>{{ e[5] }}x{{ e[6] }}</td>
-            <td>{{ e[7] }}</td>
-            <td>{{ e[8] }}</td>
-            <td>{{ e[9] }}</td>
-            <td>{{ e[10] }}</td>
-            <td>{% if e[10] == '26g' %}✓{% endif %}</td>
-            <td>{% if e[10] == '24g' %}✓{% endif %}</td>
-            <td>{% if e[10] == '22g' %}✓{% endif %}</td>
-            <td>{% if e[10] == '20g' %}✓{% endif %}</td>
-            <td>{% if e[10] == '18g' %}✓{% endif %}</td>
-            <td>{{ e[11] }}</td>
-            <td>{{ e[12] }}</td>
-            <td>{{ e[13] }}</td>
-            <td>{{ e[14] }}</td>
-            <td>{{ e[15] }}</td>
+            <td>{{ e.duct_no }}</td>
+            <td>{{ e.duct_type }}</td>
+            <td>{{ e.width1 }}x{{ e.height1 }}</td>
+            <td>{{ e.width2 }}x{{ e.height2 }}</td>
+            <td>{{ e.length_or_radius }}</td>
+            <td>{{ e.quantity }}</td>
+            <td>{{ e.degree_or_offset }}</td>
+            <td>{{ e.gauge }}</td>
+            <td>{{ '✓' if e.gauge == '24g' else '' }}</td>
+            <td>{{ '✓' if e.gauge == '22g' else '' }}</td>
+            <td>{{ '✓' if e.gauge == '20g' else '' }}</td>
+            <td>{{ '✓' if e.gauge == '18g' else '' }}</td>
+            <td>{{ e.area }}</td>
+            <td>{{ e.nuts_bolts }}</td>
+            <td>{{ e.cleat }}</td>
+            <td>{{ e.gasket }}</td>
+            <td>{{ e.corner_pieces }}</td>
             <td>
-              <a href="/edit/{{ e[0] }}">Edit</a> |
-              <a href="/delete/{{ e[0] }}" onclick="return confirm('Delete this entry?');">Delete</a>
+              <a href="/edit/{{ e.id }}">Edit</a> |
+              <a href="/delete/{{ e.id }}" onclick="return confirm('Delete this entry?');">Delete</a>
             </td>
           </tr>
         {% endfor %}
