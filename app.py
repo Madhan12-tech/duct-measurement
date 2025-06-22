@@ -64,6 +64,5 @@ def duct_entry():
 
 # ✅ Only run init_db and app locally
 app = Flask(__name__)
-
-    init_db()
+init_db()
     app.run(debug=True)
