@@ -8,10 +8,11 @@ from reportlab.pdfgen import canvas
 app = Flask(__name__)
 app.secret_key = 'secretkey'
 
-# Ensure tables exist
 def init_db():
     conn = sqlite3.connect('data.db')
     c = conn.cursor()
+
+    # Create project table
     c.execute('''
         CREATE TABLE IF NOT EXISTS projects (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -24,10 +25,11 @@ def init_db():
             timestamp DATETIME
         )
     ''')
+
+    # Create duct entries table
     c.execute('''
         CREATE TABLE IF NOT EXISTS duct_entries (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            project_id INTEGER,
             duct_no TEXT,
             duct_type TEXT,
             width REAL,
@@ -38,56 +40,14 @@ def init_db():
             factor REAL,
             area REAL,
             accessories REAL,
-            timestamp DATETIME,
-            FOREIGN KEY (project_id) REFERENCES projects(id)
+            timestamp DATETIME
         )
     ''')
+
     conn.commit()
     conn.close()
 
 init_db()
-
-@app.route('/')
-def home():
-    return render_template('home.html')
-
-@app.route('/save_project', methods=['POST'])
-def save_project():
-    data = (
-        request.form['project_name'],
-        request.form['enquiry_no'],
-        request.form['office_no'],
-        request.form['site_engineer'],
-        request.form['site_contact'],
-        request.form['location'],
-        datetime.now()
-    )
-    conn = sqlite3.connect('data.db')
-    c = conn.cursor()
-    c.execute("INSERT INTO projects (project_name, enquiry_no, office_no, site_engineer, site_contact, location, timestamp) VALUES (?, ?, ?, ?, ?, ?, ?)", data)
-    conn.commit()
-    project_id = c.lastrowid
-    conn.close()
-    return redirect(url_for('duct_entry', project_id=project_id))
-
-@app.route('/duct_entry')
-def duct_entry():
-    project_id = request.args.get('project_id')
-    conn = sqlite3.connect('data.db')
-    c = conn.cursor()
-    c.execute("SELECT * FROM projects WHERE id=?", (project_id,))
-    project = c.fetchone()
-    c.execute("SELECT * FROM duct_entries WHERE project_id=? ORDER BY id DESC", (project_id,))
-    entries = c.fetchall()
-    c.execute("SELECT SUM(quantity), SUM(area), SUM(accessories) FROM duct_entries WHERE project_id=?", (project_id,))
-    total = c.fetchone()
-    conn.close()
-    total_data = {
-        'total_qty': total[0] or 0,
-        'total_area': round(total[1] or 0, 2),
-        'total_acc': round(total[2] or 0, 2)
-    }
-    return render_template('duct_entry.html', project=project, entries=entries, total=total_data)
 
 def calculate_area(width, height, length, factor):
     return round(((2 * (width + height)) * length * factor) / 144, 2)
@@ -95,11 +55,59 @@ def calculate_area(width, height, length, factor):
 def calculate_accessories(area):
     return round(area * 0.25, 2)
 
+@app.route('/')
+def home():
+    return render_template('home.html')
+
+@app.route('/save_project', methods=['POST'])
+def save_project():
+    form = request.form
+    data = (
+        form['project_name'],
+        form['enquiry_no'],
+        form['office_no'],
+        form['site_engineer'],
+        form['site_contact'],
+        form['location'],
+        datetime.now()
+    )
+    conn = sqlite3.connect('data.db')
+    cursor = conn.cursor()
+    cursor.execute('''
+        INSERT INTO projects
+        (project_name, enquiry_no, office_no, site_engineer, site_contact, location, timestamp)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+    ''', data)
+    conn.commit()
+    conn.close()
+    flash('Project saved successfully!')
+    return redirect(url_for('duct_entry'))
+
+@app.route('/duct_entry')
+def duct_entry():
+    conn = sqlite3.connect('data.db')
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM duct_entries ORDER BY id DESC")
+    entries = cursor.fetchall()
+
+    cursor.execute("SELECT SUM(quantity), SUM(area), SUM(accessories) FROM duct_entries")
+    total = cursor.fetchone()
+    total_data = {
+        'total_qty': total[0] or 0,
+        'total_area': round(total[1] or 0, 2),
+        'total_acc': round(total[2] or 0, 2)
+    }
+
+    cursor.execute("SELECT * FROM projects ORDER BY id DESC LIMIT 1")
+    project = cursor.fetchone()
+
+    conn.close()
+    return render_template('duct_entry.html', entries=entries, total=total_data, project=project)
+
 @app.route('/add_duct', methods=['POST'])
 def add_duct():
     form = request.form
     id = form.get('id')
-    project_id = request.args.get('project_id')
     duct_no = form['duct_no']
     duct_type = form['duct_type']
     width = float(form['width'])
@@ -108,8 +116,10 @@ def add_duct():
     quantity = int(form['quantity'])
     gauge = form['gauge']
     factor = float(form['factor']) if form['factor'] else 1.0
+
     area = calculate_area(width, height, length, factor)
     accessories = calculate_accessories(area)
+
     conn = sqlite3.connect('data.db')
     cursor = conn.cursor()
     if id:
@@ -122,13 +132,13 @@ def add_duct():
     else:
         cursor.execute('''
             INSERT INTO duct_entries 
-            (project_id, duct_no, duct_type, width, height, length_or_radius, quantity, gauge, factor, area, accessories, timestamp)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ''', (project_id, duct_no, duct_type, width, height, length, quantity, gauge, factor, area, accessories, datetime.now()))
+            (duct_no, duct_type, width, height, length_or_radius, quantity, gauge, factor, area, accessories, timestamp)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (duct_no, duct_type, width, height, length, quantity, gauge, factor, area, accessories, datetime.now()))
         flash('Duct entry added!')
     conn.commit()
     conn.close()
-    return redirect(url_for('duct_entry', project_id=project_id))
+    return redirect(url_for('duct_entry'))
 
 @app.route('/edit/<int:id>')
 def edit_duct(id):
@@ -136,34 +146,87 @@ def edit_duct(id):
     c = conn.cursor()
     c.execute("SELECT * FROM duct_entries WHERE id=?", (id,))
     entry = c.fetchone()
-    c.execute("SELECT * FROM projects WHERE id=?", (entry[1],))
-    project = c.fetchone()
-    c.execute("SELECT * FROM duct_entries WHERE project_id=? ORDER BY id DESC", (entry[1],))
+
+    c.execute("SELECT * FROM duct_entries ORDER BY id DESC")
     entries = c.fetchall()
-    c.execute("SELECT SUM(quantity), SUM(area), SUM(accessories) FROM duct_entries WHERE project_id=?", (entry[1],))
+
+    c.execute("SELECT SUM(quantity), SUM(area), SUM(accessories) FROM duct_entries")
     total = c.fetchone()
-    conn.close()
     total_data = {
         'total_qty': total[0] or 0,
         'total_area': round(total[1] or 0, 2),
         'total_acc': round(total[2] or 0, 2)
     }
-    return render_template('duct_entry.html', project=project, entries=entries, total=total_data, edit_entry=entry)
+
+    c.execute("SELECT * FROM projects ORDER BY id DESC LIMIT 1")
+    project = c.fetchone()
+
+    conn.close()
+    return render_template("duct_entry.html", edit_entry=entry, entries=entries, total=total_data, project=project)
 
 @app.route('/delete/<int:id>')
 def delete_duct(id):
     conn = sqlite3.connect('data.db')
     c = conn.cursor()
-    c.execute("SELECT project_id FROM duct_entries WHERE id=?", (id,))
-    project_id = c.fetchone()[0]
     c.execute("DELETE FROM duct_entries WHERE id=?", (id,))
     conn.commit()
     conn.close()
     flash('Duct entry deleted!')
-    return redirect(url_for('duct_entry', project_id=project_id))
+    return redirect(url_for('duct_entry'))
+
+@app.route('/export_excel')
+def export_excel():
+    conn = sqlite3.connect('data.db')
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM duct_entries")
+    data = cursor.fetchall()
+
+    output = io.BytesIO()
+    workbook = xlsxwriter.Workbook(output)
+    worksheet = workbook.add_worksheet()
+
+    headers = ['ID', 'Duct No', 'Type', 'Width', 'Height', 'Length', 'Qty', 'Gauge', 'Factor', 'Area', 'Accessories']
+    for col, header in enumerate(headers):
+        worksheet.write(0, col, header)
+
+    for row_num, row in enumerate(data, 1):
+        for col_num in range(11):
+            worksheet.write(row_num, col_num, row[col_num])
+
+    workbook.close()
+    output.seek(0)
+    return send_file(output, download_name="duct_entries.xlsx", as_attachment=True)
+
+@app.route('/export_pdf')
+def export_pdf():
+    conn = sqlite3.connect('data.db')
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM duct_entries")
+    data = cursor.fetchall()
+
+    output = io.BytesIO()
+    pdf = canvas.Canvas(output)
+    pdf.setFont("Helvetica", 10)
+    y = 800
+
+    pdf.drawString(30, y, "Duct Entries Report")
+    y -= 20
+    for entry in data:
+        text = f"{entry[0]} | {entry[1]} | {entry[2]} | {entry[3]}x{entry[4]} | L:{entry[5]} | Qty:{entry[6]} | G:{entry[7]} | A:{entry[9]} | Acc:{entry[10]}"
+        pdf.drawString(30, y, text)
+        y -= 15
+        if y < 50:
+            pdf.showPage()
+            y = 800
+
+    pdf.save()
+    output.seek(0)
+    return send_file(output, download_name="duct_entries.pdf", as_attachment=True)
 
 @app.route('/submit_all', methods=['POST'])
 def submit_all():
-    project_id = request.args.get('project_id')
     flash(f"All duct entries submitted successfully at {datetime.now().strftime('%H:%M:%S')}")
-    return redirect(url_for('duct_entry', project_id=project_id))
+    return redirect(url_for('duct_entry'))
+
+if __name__ == '__main__':
+    app.run(debug=True)
