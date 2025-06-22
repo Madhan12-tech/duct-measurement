@@ -12,7 +12,6 @@ def init_db():
     conn = sqlite3.connect('data.db')
     c = conn.cursor()
 
-    # Create duct_entries table
     c.execute('''
         CREATE TABLE IF NOT EXISTS duct_entries (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -35,7 +34,6 @@ def init_db():
         )
     ''')
 
-    # Create projects table
     c.execute('''
         CREATE TABLE IF NOT EXISTS projects (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -66,8 +64,21 @@ def home():
     project = cursor.fetchone()
     cursor.execute("SELECT * FROM duct_entries ORDER BY id DESC")
     entries = cursor.fetchall()
+
+    # Totals
+    cursor.execute("SELECT SUM(quantity), SUM(area), SUM(nuts_bolts), SUM(cleat), SUM(gasket), SUM(corner_pieces) FROM duct_entries")
+    total = cursor.fetchone()
+    total_data = {
+        'total_qty': total[0] or 0,
+        'total_area': round(total[1] or 0, 2),
+        'total_bolts': total[2] or 0,
+        'total_cleat': total[3] or 0,
+        'total_gasket': round(total[4] or 0, 2),
+        'total_corners': total[5] or 0
+    }
+
     conn.close()
-    return render_template('duct_entry.html', project=project, entries=entries)
+    return render_template('duct_entry.html', project=project, entries=entries, total=total_data)
 
 @app.route('/save_project', methods=['POST'])
 def save_project():
@@ -180,3 +191,52 @@ def delete_duct(id):
 def submit_all():
     flash('All duct entries submitted successfully!')
     return redirect(url_for('home'))
+
+@app.route('/export_excel')
+def export_excel():
+    conn = sqlite3.connect('data.db')
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM duct_entries")
+    data = cursor.fetchall()
+
+    output = io.BytesIO()
+    workbook = xlsxwriter.Workbook(output)
+    worksheet = workbook.add_worksheet()
+
+    headers = ['ID', 'Duct No', 'Type', 'W1', 'H1', 'W2', 'H2', 'Length/Radius', 'Qty', 'Degree/Offset', 'Gauge', 'Area', 'Nuts & Bolts', 'Cleat', 'Gasket', 'Corner Pieces']
+    for col, header in enumerate(headers):
+        worksheet.write(0, col, header)
+
+    for row_num, row in enumerate(data, 1):
+        for col_num, value in enumerate(row[:-1]):  # skip timestamp
+            worksheet.write(row_num, col_num, value)
+
+    workbook.close()
+    output.seek(0)
+    return send_file(output, download_name="duct_entries.xlsx", as_attachment=True)
+
+@app.route('/export_pdf')
+def export_pdf():
+    conn = sqlite3.connect('data.db')
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM duct_entries")
+    data = cursor.fetchall()
+
+    output = io.BytesIO()
+    pdf = canvas.Canvas(output)
+    pdf.setFont("Helvetica", 9)
+    y = 800
+    pdf.drawString(30, y, "Duct Entries Report")
+    y -= 20
+
+    for entry in data:
+        text = f"{entry[0]} | {entry[1]} | {entry[2]} | {entry[3]}x{entry[4]} | {entry[5]}x{entry[6]} | L:{entry[7]} | Qty:{entry[8]} | G:{entry[10]} | A:{entry[11]} | B:{entry[12]} | C:{entry[13]} | Gk:{entry[14]} | Cp:{entry[15]}"
+        pdf.drawString(30, y, text)
+        y -= 12
+        if y < 50:
+            pdf.showPage()
+            y = 800
+
+    pdf.save()
+    output.seek(0)
+    return send_file(output, download_name="duct_entries.pdf", as_attachment=True)
