@@ -1,12 +1,21 @@
-{% extends "base.html" %}
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Home - Measurement App</title>
+</head>
+<body style="font-family: Arial; padding: 20px;">
 
-{% block title %}home| measurement{% endblock %}
+  <h2>Add Project and Client Details</h2>
+  <form method="POST" action="/save_project">
+    <input type="text" name="project_name" placeholder="Project Name" required><br><br>
+    <input type="text" name="enquiry_no" placeholder="Enquiry No" required><br><br>
+    <input type="text" name="office_no" placeholder="Office No" required><br><br>
+    <input type="text" name="site_engineer" placeholder="Site Engineer" required><br><br>
+    <input type="text" name="site_contact" placeholder="Site Contact No" required><br><br>
+    <input type="text" name="location" placeholder="Location" required><br><br>
+    <button type="submit">Save and Continue</button>
+  </form>
 
-{% block content %}
-<div class="text-center">
-  <h1 clas="mt-4 mb-3 text-primary">Welcome to the measurement project<h1>
-    <p class="lead">click the button below to get started with a new project</p>
-  
-<a href="/projects" class="btn btn-success btn-lg mt-3">Add New project</a>
-  </div>
-{% endblock %}
+</body>
+</html>
+
