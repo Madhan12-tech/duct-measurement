@@ -59,7 +59,9 @@
       <h3>Duct Entries</h3>
       <table>
         <tr>
-          <th>Duct No</th><th>Type</th><th>W1xH1</th><th>W2xH2</th><th>Length</th><th>Qty</th><th>Deg/Off</th>
+          <th>Duct No</th><th>Type</th>
+          <th>Width1</th><th>Height1</th><th>Width2</th><th>Height2</th>
+          <th>Length</th><th>Qty</th><th>Deg/Off</th>
           <th>Gauge</th><th>24g</th><th>22g</th><th>20g</th><th>18g</th>
           <th>Area</th><th>Nuts & Bolts</th><th>Cleat</th><th>Gasket</th><th>Corner Pieces</th><th>Action</th>
         </tr>
@@ -67,8 +69,10 @@
           <tr>
             <td>{{ e.duct_no }}</td>
             <td>{{ e.duct_type }}</td>
-            <td>{{ e.width1 }}x{{ e.height1 }}</td>
-            <td>{{ e.width2 }}x{{ e.height2 }}</td>
+            <td>{{ e.width1 }}</td>
+            <td>{{ e.height1 }}</td>
+            <td>{{ e.width2 }}</td>
+            <td>{{ e.height2 }}</td>
             <td>{{ e.length_or_radius }}</td>
             <td>{{ e.quantity }}</td>
             <td>{{ e.degree_or_offset }}</td>
