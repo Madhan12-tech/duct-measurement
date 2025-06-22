@@ -1,4 +1,6 @@
-flask
-fpdf
-xlsxwriter
+Flask
 gunicorn
+Flask
+gunicorn
+reportlab
+openpyxl
