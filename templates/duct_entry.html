@@ -1,60 +1,81 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+  <meta charset="UTF-8">
   <title>Duct Entry</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
   <style>
     body {
       font-family: Arial, sans-serif;
-      padding: 20px;
-      background: #f9f9f9;
+      padding: 10px;
+      background: #f7f9fb;
     }
+
     .container {
       display: flex;
+      flex-wrap: wrap;
       gap: 20px;
     }
-    form {
-      flex: 1;
+
+    form, .table-container {
+      flex: 1 1 100%;
       background: #fff;
       padding: 15px;
       border-radius: 8px;
       box-shadow: 0 0 5px #ccc;
     }
+
     input, select {
       width: 100%;
       padding: 8px;
       margin-bottom: 10px;
     }
+
+    .actions, .search-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    .actions button, .search-bar input {
+      padding: 6px 10px;
+      flex: 1;
+    }
+
     table {
-      flex: 2;
       width: 100%;
       border-collapse: collapse;
-      background: #fff;
-      box-shadow: 0 0 5px #ccc;
+      margin-top: 10px;
     }
+
     th, td {
       border: 1px solid #ddd;
       padding: 6px;
       text-align: center;
     }
+
     th {
       background-color: #004a99;
       color: white;
     }
-    .actions {
-      margin: 10px 0;
-    }
-    .actions button {
-      margin-right: 10px;
-      padding: 6px 10px;
-    }
-    .fa-icon {
-      margin-right: 5px;
-    }
-    .header {
-      margin-bottom: 15px;
+
+    @media (min-width: 768px) {
+      form, .table-container {
+        flex: 1;
+      }
     }
   </style>
+  <script>
+    function filterTable() {
+      const input = document.getElementById("searchInput").value.toLowerCase();
+      const rows = document.querySelectorAll("#entriesTable tbody tr");
+      rows.forEach(row => {
+        row.style.display = row.innerText.toLowerCase().includes(input) ? "" : "none";
+      });
+    }
+  </script>
 </head>
 <body>
 
@@ -68,21 +89,19 @@
     {% endif %}
   {% endwith %}
 
-  <div class="header">
-    <h2>Project Information</h2>
-    {% if project %}
-      <p><strong>{{ project[1] }}</strong> | Enquiry: {{ project[2] }} | Office: {{ project[3] }} |
-         Engineer: {{ project[4] }} | Contact: {{ project[5] }} | Location: {{ project[6] }}</p>
-    {% else %}
-      <p>No project information available.</p>
-    {% endif %}
-  </div>
+  <h2>Project Info</h2>
+  {% if project %}
+    <p><strong>{{ project[1] }}</strong> | Enquiry: {{ project[2] }} | Office: {{ project[3] }} |
+      Engineer: {{ project[4] }} | Contact: {{ project[5] }} | Location: {{ project[6] }}</p>
+  {% else %}
+    <p>No project information available.</p>
+  {% endif %}
 
   <div class="container">
 
     <!-- Duct Entry Form -->
     <form action="/add_duct" method="POST">
-      <h3>Duct Entry</h3>
+      <h3>{{ edit_entry and "Edit" or "Add" }} Duct Entry</h3>
       <input type="hidden" name="id" value="{{ edit_entry[0] if edit_entry else '' }}">
       <input type="text" name="duct_no" placeholder="Duct No" value="{{ edit_entry[1] if edit_entry else '' }}" required>
       <select name="duct_type" required>
@@ -98,25 +117,31 @@
       <input type="number" step="any" name="length_or_radius" placeholder="Length/Radius (mm)" value="{{ edit_entry[7] if edit_entry else '' }}" required>
       <input type="number" name="quantity" placeholder="Quantity" value="{{ edit_entry[8] if edit_entry else '' }}" required>
       <input type="number" step="any" name="degree_or_offset" placeholder="Degree/Offset (mm)" value="{{ edit_entry[9] if edit_entry else '' }}">
-      <button type="submit">{{ 'Update' if edit_entry else 'Add' }} <i class="fa fa-plus"></i></button>
+      <button type="submit"><i class="fa fa-check"></i> {{ edit_entry and "Update" or "Add" }}</button>
     </form>
 
-    <!-- Entries Table -->
-    <div>
+    <!-- Table Display -->
+    <div class="table-container">
       <h3>Live Entries</h3>
+
+      <div class="search-bar">
+        <input type="text" id="searchInput" onkeyup="filterTable()" placeholder="Search by any field...">
+      </div>
+
       <div class="actions">
-        <form action="/export_excel" method="get" style="display:inline;">
+        <form action="/export_excel" method="get">
           <button type="submit"><i class="fa fa-file-excel"></i> Export Excel</button>
         </form>
-        <form action="/export_pdf" method="get" style="display:inline;">
+        <form action="/export_pdf" method="get">
           <button type="submit"><i class="fa fa-file-pdf"></i> Export PDF</button>
         </form>
-        <form action="/submit_all" method="post" style="display:inline;">
+        <form action="/submit_all" method="post">
           <button type="submit"><i class="fa fa-paper-plane"></i> Submit All</button>
         </form>
         <button onclick="window.print()"><i class="fa fa-print"></i> Print</button>
       </div>
-      <table>
+
+      <table id="entriesTable">
         <thead>
           <tr>
             <th>#</th>
@@ -134,12 +159,12 @@
             <th>22g</th>
             <th>20g</th>
             <th>18g</th>
-            <th>Area</th>
-            <th>Nuts & Bolts</th>
+            <th>Total Area</th>
+            <th>Bolt</th>
             <th>Cleat</th>
             <th>Gasket</th>
             <th>Corner</th>
-            <th>Actions</th>
+            <th>Action</th>
           </tr>
         </thead>
         <tbody>
