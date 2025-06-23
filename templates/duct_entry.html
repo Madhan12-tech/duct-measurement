@@ -2,16 +2,66 @@
 <html>
 <head>
   <title>Duct Entry</title>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
   <style>
-    body { font-family: Arial; padding: 20px; }
-    .container { display: flex; gap: 20px; }
-    form { flex: 1; background: #f9f9f9; padding: 15px; border-radius: 6px; }
-    table { flex: 2; width: 100%; border-collapse: collapse; font-size: 14px; }
-    th, td { border: 1px solid #aaa; padding: 6px; text-align: center; }
-    th { background-color: #eee; }
-    .actions button { margin: 4px; }
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+    }
+    .container {
+      display: flex;
+      gap: 20px;
+      align-items: flex-start;
+    }
+    form {
+      flex: 1;
+      background-color: #f9f9f9;
+      padding: 15px;
+      border: 1px solid #ccc;
+    }
+    table {
+      flex: 2;
+      width: 100%;
+      border-collapse: collapse;
+    }
+    th, td {
+      border: 1px solid #999;
+      padding: 6px;
+      text-align: center;
+    }
+    th {
+      background-color: #eee;
+    }
+    .actions {
+      margin-top: 10px;
+    }
+    button, input, select {
+      width: 100%;
+      margin-bottom: 10px;
+      padding: 8px;
+    }
+    .action-icons a {
+      margin: 0 4px;
+      text-decoration: none;
+      font-weight: bold;
+    }
+    .print-btn {
+      background-color: #4CAF50;
+      color: white;
+      padding: 8px 15px;
+      margin-top: 5px;
+      border: none;
+      cursor: pointer;
+    }
   </style>
+  <script>
+    function printTable() {
+      const printContent = document.getElementById('entries-table').outerHTML;
+      const win = window.open('', '', 'width=900,height=700');
+      win.document.write('<html><head><title>Print</title></head><body>' + printContent + '</body></html>');
+      win.print();
+      win.close();
+    }
+  </script>
 </head>
 <body>
 
@@ -25,7 +75,7 @@
     {% endif %}
   {% endwith %}
 
-  <h2><i class="fa-solid fa-diagram-project"></i> Project Details</h2>
+  <h2>Project Information</h2>
   {% if project %}
     <p><strong>{{ project[1] }}</strong> | Enquiry: {{ project[2] }} | Office: {{ project[3] }} |
        Engineer: {{ project[4] }} | Contact: {{ project[5] }} | Location: {{ project[6] }}</p>
@@ -35,65 +85,101 @@
 
   <div class="container">
 
-    <!-- Form -->
+    <!-- Left: Duct Entry Form -->
     <form action="/add_duct" method="POST">
-      <h3><i class="fa-solid fa-ruler-combined"></i> Add Duct Entry</h3>
-      <input type="text" name="duct_no" placeholder="Duct No" value="{{ edit_entry[1] if edit_entry else '' }}" required><br><br>
+      <h3>Duct Entry</h3>
+      <input type="text" name="duct_no" placeholder="Duct No" value="{{ edit_entry[1] if edit_entry }}" required>
       <select name="duct_type" required>
         <option value="">Select Type</option>
         {% for t in ['ST','SHOE','RED','OFFSET','DUM','ELB','VANES'] %}
-        <option value="{{ t }}" {% if edit_entry and edit_entry[2] == t %}selected{% endif %}>{{ t }}</option>
+          <option value="{{ t }}" {% if edit_entry and edit_entry[2] == t %}selected{% endif %}>{{ t }}</option>
         {% endfor %}
-      </select><br><br>
-      <input type="number" step="any" name="width1" placeholder="Width1" value="{{ edit_entry[3] if edit_entry else '' }}"><br><br>
-      <input type="number" step="any" name="height1" placeholder="Height1" value="{{ edit_entry[4] if edit_entry else '' }}"><br><br>
-      <input type="number" step="any" name="width2" placeholder="Width2" value="{{ edit_entry[5] if edit_entry else '' }}"><br><br>
-      <input type="number" step="any" name="height2" placeholder="Height2" value="{{ edit_entry[6] if edit_entry else '' }}"><br><br>
-      <input type="number" step="any" name="length_or_radius" placeholder="Length/Radius" value="{{ edit_entry[7] if edit_entry else '' }}"><br><br>
-      <input type="number" name="quantity" placeholder="Quantity" value="{{ edit_entry[8] if edit_entry else '' }}"><br><br>
-      <input type="number" step="any" name="degree_or_offset" placeholder="Degree/Offset" value="{{ edit_entry[9] if edit_entry else '' }}"><br><br>
+      </select>
+      <input type="number" step="any" name="width1" placeholder="Width1" value="{{ edit_entry[3] if edit_entry }}" required>
+      <input type="number" step="any" name="height1" placeholder="Height1" value="{{ edit_entry[4] if edit_entry }}" required>
+      <input type="number" step="any" name="width2" placeholder="Width2" value="{{ edit_entry[5] if edit_entry }}">
+      <input type="number" step="any" name="height2" placeholder="Height2" value="{{ edit_entry[6] if edit_entry }}">
+      <input type="number" step="any" name="length_or_radius" placeholder="Length/Radius" value="{{ edit_entry[7] if edit_entry }}" required>
+      <input type="number" name="quantity" placeholder="Quantity" value="{{ edit_entry[8] if edit_entry }}" required>
+      <input type="number" step="any" name="degree_or_offset" placeholder="Degree/Offset" value="{{ edit_entry[9] if edit_entry }}">
       <button type="submit">{{ 'Update' if edit_entry else 'Add' }}</button>
     </form>
 
-    <!-- Table -->
+    <!-- Right: Table of Duct Entries -->
     <div>
-      <h3><i class="fa-solid fa-table-list"></i> Duct Entries</h3>
+      <h3>Live Entries</h3>
       <div class="actions">
-        <form action="/export_excel" method="get" style="display:inline;"><button type="submit">Excel</button></form>
-        <form action="/export_pdf" method="get" style="display:inline;"><button type="submit">PDF</button></form>
-        <form action="/submit_all" method="post" style="display:inline;"><button type="submit">Submit</button></form>
+        <form action="/export_excel" method="get" style="display:inline;">
+          <button type="submit">📊 Excel</button>
+        </form>
+        <form action="/export_pdf" method="get" style="display:inline;">
+          <button type="submit">📄 PDF</button>
+        </form>
+        <form action="/submit_all" method="post" style="display:inline;">
+          <button type="submit">✅ Submit</button>
+        </form>
+        <button onclick="printTable()" class="print-btn">🖨️ Print</button>
       </div>
       <br>
-      <table>
+      <table id="entries-table">
         <thead>
           <tr>
-            <th>#</th><th>Duct No</th><th>Type</th><th>W1</th><th>H1</th><th>W2</th><th>H2</th>
-            <th>L/R</th><th>Qty</th><th>Deg/Off</th><th>Gauge</th>
-            <th>24g</th><th>22g</th><th>20g</th><th>18g</th>
-            <th>Area</th><th>N&B</th><th>Cleat</th><th>Gasket</th><th>Corner</th><th>Actions</th>
+            <th>No</th>
+            <th>Duct No</th>
+            <th>Type</th>
+            <th>W1</th>
+            <th>H1</th>
+            <th>W2</th>
+            <th>H2</th>
+            <th>Length/Radius</th>
+            <th>Qty</th>
+            <th>Degree/Offset</th>
+            <th>Gauge</th>
+            <th>24g</th>
+            <th>22g</th>
+            <th>20g</th>
+            <th>18g</th>
+            <th>Area</th>
+            <th>Nuts & Bolts</th>
+            <th>Cleat</th>
+            <th>Gasket</th>
+            <th>Corner</th>
+            <th>Actions</th>
           </tr>
         </thead>
         <tbody>
-        {% for e in entries %}
+          {% for entry in entries %}
           <tr>
             <td>{{ loop.index }}</td>
-            <td>{{ e[1] }}</td><td>{{ e[2] }}</td><td>{{ e[3] }}</td><td>{{ e[4] }}</td><td>{{ e[5] }}</td><td>{{ e[6] }}</td>
-            <td>{{ e[7] }}</td><td>{{ e[8] }}</td><td>{{ e[9] }}</td>
-            <td>{{ e[10] }}</td>
-            <td>{% if e[10] == '24g' %}{{ '%.2f'|format(e[11]) }}{% endif %}</td>
-            <td>{% if e[10] == '22g' %}{{ '%.2f'|format(e[11]) }}{% endif %}</td>
-            <td>{% if e[10] == '20g' %}{{ '%.2f'|format(e[11]) }}{% endif %}</td>
-            <td>{% if e[10] == '18g' %}{{ '%.2f'|format(e[11]) }}{% endif %}</td>
-            <td>{{ '%.2f'|format(e[11]) }}</td>
-            <td>{{ e[12] }}</td><td>{{ e[13] }}</td><td>{{ '%.2f'|format(e[14]) }}</td><td>{{ e[15] }}</td>
-            <td><a href="/edit/{{ e[0] }}"><i class="fa fa-pen"></i></a> |
-                <a href="/delete/{{ e[0] }}" onclick="return confirm('Are you sure?')"><i class="fa fa-trash"></i></a></td>
+            <td>{{ entry[1] }}</td>
+            <td>{{ entry[2] }}</td>
+            <td>{{ entry[3] }}</td>
+            <td>{{ entry[4] }}</td>
+            <td>{{ entry[5] }}</td>
+            <td>{{ entry[6] }}</td>
+            <td>{{ entry[7] }}</td>
+            <td>{{ entry[8] }}</td>
+            <td>{{ entry[9] }}</td>
+            <td>{{ entry[10] }}</td>
+            <td>{{ "%.2f"|format(entry[11]) if entry[10] == '24g' else '' }}</td>
+            <td>{{ "%.2f"|format(entry[11]) if entry[10] == '22g' else '' }}</td>
+            <td>{{ "%.2f"|format(entry[11]) if entry[10] == '20g' else '' }}</td>
+            <td>{{ "%.2f"|format(entry[11]) if entry[10] == '18g' else '' }}</td>
+            <td>{{ "%.2f"|format(entry[11]) }}</td>
+            <td>{{ entry[12] }}</td>
+            <td>{{ entry[13] }}</td>
+            <td>{{ "%.2f"|format(entry[14]) }}</td>
+            <td>{{ entry[15] }}</td>
+            <td class="action-icons">
+              <a href="/edit/{{ entry[0] }}">✏️</a>
+              <a href="/delete/{{ entry[0] }}" onclick="return confirm('Delete this entry?')">🗑️</a>
+            </td>
           </tr>
-        {% endfor %}
+          {% endfor %}
         </tbody>
       </table>
     </div>
-  </div>
 
+  </div>
 </body>
 </html>
