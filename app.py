@@ -13,28 +13,6 @@ def init_db():
     conn = sqlite3.connect('data.db')
     c = conn.cursor()
     c.execute('''
-        CREATE TABLE IF NOT EXISTS duct_entries (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            duct_no TEXT,
-            duct_type TEXT,
-            width1 REAL,
-            height1 REAL,
-            width2 REAL,
-            height2 REAL,
-            length_or_radius REAL,
-            quantity INTEGER,
-            degree_or_offset REAL,
-            gauge TEXT,
-            area REAL,
-            nuts_bolts INTEGER,
-            cleat INTEGER,
-            gasket REAL,
-            corner_pieces INTEGER,
-            factor REAL DEFAULT 1.5,
-            timestamp DATETIME
-        )
-    ''')
-    c.execute('''
         CREATE TABLE IF NOT EXISTS projects (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             project_name TEXT,
@@ -46,6 +24,29 @@ def init_db():
             timestamp DATETIME
         )
     ''')
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS duct_entries (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            project_id INTEGER,
+            duct_no TEXT,
+            duct_type TEXT,
+            width1 REAL,
+            height1 REAL,
+            width2 REAL,
+            height2 REAL,
+            length_or_radius REAL,
+            quantity INTEGER,
+            degree_or_offset REAL,
+            factor REAL,
+            gauge TEXT,
+            area REAL,
+            nuts_bolts INTEGER,
+            cleat INTEGER,
+            gasket REAL,
+            corner_pieces INTEGER,
+            timestamp DATETIME
+        )
+    ''')
     conn.commit()
     conn.close()
 
@@ -53,7 +54,12 @@ init_db()
 
 @app.route('/')
 def index():
-    return render_template('home.html')
+    conn = sqlite3.connect('data.db')
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM projects ORDER BY id DESC")
+    projects = cursor.fetchall()
+    conn.close()
+    return render_template('home.html', projects=projects)
 
 @app.route('/save_project', methods=['POST'])
 def save_project():
@@ -64,81 +70,61 @@ def save_project():
         INSERT INTO projects (project_name, enquiry_no, office_no, site_engineer, site_contact, location, timestamp)
         VALUES (?, ?, ?, ?, ?, ?, ?)
     ''', (
-        form['project_name'],
-        form['enquiry_no'],
-        form['office_no'],
-        form['site_engineer'],
-        form['site_contact'],
-        form['location'],
-        datetime.now()
+        form['project_name'], form['enquiry_no'], form['office_no'],
+        form['site_engineer'], form['site_contact'], form['location'], datetime.now()
     ))
     conn.commit()
     conn.close()
     flash('Project saved successfully!')
-    return redirect(url_for('home'))
+    return redirect(url_for('index'))
 
-@app.route('/home')
-def home():
+@app.route('/home/<int:project_id>')
+def home(project_id):
     conn = sqlite3.connect('data.db')
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM projects ORDER BY id DESC LIMIT 1")
+    cursor.execute("SELECT * FROM projects WHERE id=?", (project_id,))
     project = cursor.fetchone()
-    cursor.execute("SELECT * FROM duct_entries ORDER BY id DESC")
+    cursor.execute("SELECT * FROM duct_entries WHERE project_id=? ORDER BY id DESC", (project_id,))
     entries = cursor.fetchall()
-
-    total_qty = sum(e[8] for e in entries)
-    total_area = sum(e[11] for e in entries)
-    total_bolts = sum(e[12] for e in entries)
-    total_cleat = sum(e[13] for e in entries)
-    total_gasket = sum(e[14] for e in entries)
-    total_corner = sum(e[15] for e in entries)
-    area_24g = sum(e[11] for e in entries if e[10] == '24g')
-    area_22g = sum(e[11] for e in entries if e[10] == '22g')
-    area_20g = sum(e[11] for e in entries if e[10] == '20g')
-    area_18g = sum(e[11] for e in entries if e[10] == '18g')
-
     conn.close()
+
+    def total(column): return sum(e[column] for e in entries)
+    def area_by_gauge(g): return sum(e[13] for e in entries if e[12] == g)
+
     return render_template('duct_entry.html',
         project=project,
         entries=entries,
-        total_qty=total_qty,
-        total_area=total_area,
-        total_bolts=total_bolts,
-        total_cleat=total_cleat,
-        total_gasket=total_gasket,
-        total_corner=total_corner,
-        area_24g=area_24g,
-        area_22g=area_22g,
-        area_20g=area_20g,
-        area_18g=area_18g
+        project_id=project_id,
+        total_qty=total(9),
+        total_area=total(13),
+        total_bolts=total(14),
+        total_cleat=total(15),
+        total_gasket=total(16),
+        total_corner=total(17),
+        area_24g=area_by_gauge('24g'),
+        area_22g=area_by_gauge('22g'),
+        area_20g=area_by_gauge('20g'),
+        area_18g=area_by_gauge('18g')
     )
 
 @app.route('/add_duct', methods=['POST'])
 def add_duct():
     form = request.form
     id_ = form.get('id')
-    duct_no = form['duct_no']
+    project_id = int(form.get('project_id'))
     duct_type = form['duct_type']
-    width1 = float(form['width1'] or 0)
-    height1 = float(form['height1'] or 0)
+    factor = float(form.get('factor', 1.0)) if duct_type in ['RED', 'OFFSET', 'SHOE', 'ELB'] else 1.0
+
+    width1 = float(form['width1'])
+    height1 = float(form['height1'])
     width2 = float(form['width2'] or 0)
     height2 = float(form['height2'] or 0)
-    length_or_radius = float(form['length_or_radius'] or 0)
-    quantity = int(form['quantity'] or 1)
+    length_or_radius = float(form['length_or_radius'])
+    quantity = int(form['quantity'])
     degree_or_offset = float(form['degree_or_offset'] or 0)
-    factor = float(form.get('factor') or 1.5)
 
-    # Gauge based only on width1, height1
-    if width1 <= 375 and height1 <= 375:
-        gauge = '24g'
-    elif width1 <= 600 and height1 <= 600:
-        gauge = '22g'
-    elif width1 <= 900 and height1 <= 900:
-        gauge = '20g'
-    else:
-        gauge = '18g'
+    gauge = '24g' if max(width1, height1) <= 375 else '22g' if max(width1, height1) <= 600 else '20g' if max(width1, height1) <= 900 else '18g'
 
-    # Area calculation
     if duct_type == 'ST':
         area = 2 * (width1 + height1) / 1000 * (length_or_radius / 1000) * quantity
     elif duct_type == 'RED':
@@ -156,8 +142,8 @@ def add_duct():
     else:
         area = 0
 
-    cleat = quantity * (4 if gauge == '24g' else 8 if gauge == '22g' else 10 if gauge == '20g' else 12)
     nuts_bolts = quantity * 4
+    cleat = quantity * (4 if gauge == '24g' else 8 if gauge == '22g' else 10 if gauge == '20g' else 12)
     gasket = (width1 + height1 + width2 + height2) / 1000 * quantity
     corner_pieces = 0 if duct_type == 'DUM' else quantity * 8
 
@@ -166,25 +152,28 @@ def add_duct():
 
     if id_:
         cursor.execute('''
-            UPDATE duct_entries SET duct_no=?, duct_type=?, width1=?, height1=?, width2=?, height2=?,
-            length_or_radius=?, quantity=?, degree_or_offset=?, gauge=?, area=?, nuts_bolts=?, cleat=?,
-            gasket=?, corner_pieces=?, factor=?, timestamp=? WHERE id=?
-        ''', (duct_no, duct_type, width1, height1, width2, height2, length_or_radius, quantity, degree_or_offset,
-              gauge, area, nuts_bolts, cleat, gasket, corner_pieces, factor, datetime.now(), id_))
+            UPDATE duct_entries SET project_id=?, duct_no=?, duct_type=?, width1=?, height1=?, width2=?, height2=?,
+            length_or_radius=?, quantity=?, degree_or_offset=?, factor=?, gauge=?, area=?, nuts_bolts=?, cleat=?,
+            gasket=?, corner_pieces=?, timestamp=? WHERE id=?
+        ''', (
+            project_id, form['duct_no'], duct_type, width1, height1, width2, height2, length_or_radius,
+            quantity, degree_or_offset, factor, gauge, area, nuts_bolts, cleat, gasket, corner_pieces, datetime.now(), id_
+        ))
         flash('Duct entry updated!')
     else:
         cursor.execute('''
-            INSERT INTO duct_entries (
-                duct_no, duct_type, width1, height1, width2, height2, length_or_radius, quantity,
-                degree_or_offset, gauge, area, nuts_bolts, cleat, gasket, corner_pieces, factor, timestamp
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ''', (duct_no, duct_type, width1, height1, width2, height2, length_or_radius, quantity, degree_or_offset,
-              gauge, area, nuts_bolts, cleat, gasket, corner_pieces, factor, datetime.now()))
+            INSERT INTO duct_entries (project_id, duct_no, duct_type, width1, height1, width2, height2, length_or_radius,
+            quantity, degree_or_offset, factor, gauge, area, nuts_bolts, cleat, gasket, corner_pieces, timestamp)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (
+            project_id, form['duct_no'], duct_type, width1, height1, width2, height2, length_or_radius,
+            quantity, degree_or_offset, factor, gauge, area, nuts_bolts, cleat, gasket, corner_pieces, datetime.now()
+        ))
         flash('Duct entry added!')
 
     conn.commit()
     conn.close()
-    return redirect(url_for('home'))
+    return redirect(url_for('home', project_id=project_id))
 
 @app.route('/edit/<int:id>')
 def edit_duct(id):
@@ -192,47 +181,43 @@ def edit_duct(id):
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM duct_entries WHERE id=?", (id,))
     entry = cursor.fetchone()
-    cursor.execute("SELECT * FROM projects ORDER BY id DESC LIMIT 1")
+    project_id = entry[1]
+    cursor.execute("SELECT * FROM projects WHERE id=?", (project_id,))
     project = cursor.fetchone()
-    cursor.execute("SELECT * FROM duct_entries ORDER BY id DESC")
+    cursor.execute("SELECT * FROM duct_entries WHERE project_id=? ORDER BY id DESC", (project_id,))
     entries = cursor.fetchall()
     conn.close()
-    return render_template('duct_entry.html', edit_entry=entry, project=project, entries=entries)
+    return render_template('duct_entry.html', edit_entry=entry, project=project, entries=entries, project_id=project_id)
 
 @app.route('/delete/<int:id>')
 def delete_duct(id):
     conn = sqlite3.connect('data.db')
     cursor = conn.cursor()
+    cursor.execute("SELECT project_id FROM duct_entries WHERE id=?", (id,))
+    project_id = cursor.fetchone()[0]
     cursor.execute("DELETE FROM duct_entries WHERE id=?", (id,))
     conn.commit()
     conn.close()
-    flash('Duct entry deleted!')
-    return redirect(url_for('home'))
+    flash("Duct entry deleted!")
+    return redirect(url_for('home', project_id=project_id))
 
-@app.route('/submit_all', methods=['POST'])
-def submit_all():
-    flash('All duct entries submitted successfully!')
-    return redirect(url_for('home'))
-
-@app.route('/export_excel')
-def export_excel():
+@app.route('/export_excel/<int:project_id>')
+def export_excel(project_id):
     conn = sqlite3.connect('data.db')
-    df = pd.read_sql_query("SELECT * FROM duct_entries", conn)
+    df = pd.read_sql_query("SELECT * FROM duct_entries WHERE project_id=?", conn, params=(project_id,))
     conn.close()
-
     output = BytesIO()
     writer = pd.ExcelWriter(output, engine='openpyxl')
     df.to_excel(writer, index=False, sheet_name='Duct Entries')
     writer.close()
     output.seek(0)
+    return send_file(output, as_attachment=True, download_name='duct_entries.xlsx')
 
-    return send_file(output, as_attachment=True, download_name='duct_entries.xlsx', mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-
-@app.route('/export_pdf')
-def export_pdf():
+@app.route('/export_pdf/<int:project_id>')
+def export_pdf(project_id):
     conn = sqlite3.connect('data.db')
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM duct_entries")
+    cursor.execute("SELECT * FROM duct_entries WHERE project_id=?", (project_id,))
     data = cursor.fetchall()
     conn.close()
 
@@ -244,18 +229,17 @@ def export_pdf():
     pdf.drawString(30, y, "Duct Entries Report")
     y -= 20
 
-    headers = ["ID", "Duct No", "Type", "W1", "H1", "W2", "H2", "L/R", "Qty", "Deg/Off", "Gauge"]
     for row in data:
-        row_data = ", ".join(str(row[i]) for i in range(11))
+        text = ", ".join(str(x) for x in row[1:12])
         if y < 40:
             pdf.showPage()
             y = height - 40
-        pdf.drawString(30, y, row_data)
+        pdf.drawString(30, y, text)
         y -= 15
 
     pdf.save()
     output.seek(0)
-    return send_file(output, as_attachment=True, download_name='duct_entries.pdf', mimetype='application/pdf')
+    return send_file(output, as_attachment=True, download_name='duct_entries.pdf')
 
 if __name__ == '__main__':
     app.run(debug=True)
