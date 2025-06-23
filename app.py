@@ -48,7 +48,7 @@ init_db()
 
 @app.route('/')
 def index():
-    return render_template('home.html')
+    return redirect(url_for('home'))
 
 @app.route('/home')
 def home():
