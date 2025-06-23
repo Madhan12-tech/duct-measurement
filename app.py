@@ -54,34 +54,41 @@ def index():
 def home():
     conn = sqlite3.connect('data.db')
     cursor = conn.cursor()
+
     cursor.execute("SELECT * FROM projects ORDER BY id DESC LIMIT 1")
     project = cursor.fetchone()
+
     cursor.execute("SELECT * FROM duct_entries ORDER BY id DESC")
     entries = cursor.fetchall()
-    conn.close()
-    return render_template('duct_entry.html', project=project, entries=entries)
 
-@app.route('/save_project', methods=['POST'])
-def save_project():
-    data = (
-        request.form['project_name'],
-        request.form['enquiry_no'],
-        request.form['office_no'],
-        request.form['site_engineer'],
-        request.form['site_contact'],
-        request.form['location'],
-        datetime.now()
-    )
-    conn = sqlite3.connect('data.db')
-    cursor = conn.cursor()
-    cursor.execute('''
-        INSERT INTO projects (project_name, enquiry_no, office_no, site_engineer, site_contact, location, timestamp)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-    ''', data)
-    conn.commit()
+    # Totals
+    total_qty = sum(entry[8] for entry in entries)
+    total_area = sum(entry[11] for entry in entries)
+    total_bolts = sum(entry[12] for entry in entries)
+    total_cleat = sum(entry[13] for entry in entries)
+    total_gasket = sum(entry[14] for entry in entries)
+    total_corner = sum(entry[15] for entry in entries)
+    area_24g = sum(entry[11] for entry in entries if entry[10] == '24g')
+    area_22g = sum(entry[11] for entry in entries if entry[10] == '22g')
+    area_20g = sum(entry[11] for entry in entries if entry[10] == '20g')
+    area_18g = sum(entry[11] for entry in entries if entry[10] == '18g')
+
     conn.close()
-    flash('Project saved successfully!')
-    return redirect(url_for('home'))
+    return render_template(
+        'duct_entry.html',
+        project=project,
+        entries=entries,
+        total_qty=total_qty,
+        total_area=total_area,
+        total_bolts=total_bolts,
+        total_cleat=total_cleat,
+        total_gasket=total_gasket,
+        total_corner=total_corner,
+        area_24g=area_24g,
+        area_22g=area_22g,
+        area_20g=area_20g,
+        area_18g=area_18g
+    )
 
 @app.route('/add_duct', methods=['POST'])
 def add_duct():
@@ -141,8 +148,7 @@ def add_duct():
         cursor.execute('''
             UPDATE duct_entries SET duct_no=?, duct_type=?, width1=?, height1=?, width2=?, height2=?,
             length_or_radius=?, quantity=?, degree_or_offset=?, gauge=?, area=?, nuts_bolts=?, cleat=?,
-            gasket=?, corner_pieces=?, timestamp=?
-            WHERE id=?
+            gasket=?, corner_pieces=?, timestamp=? WHERE id=?
         ''', (duct_no, duct_type, width1, height1, width2, height2, length_or_radius, quantity, degree_or_offset,
               gauge, area, nuts_bolts, cleat, gasket, corner_pieces, datetime.now(), id_))
         flash('Duct entry updated!')
