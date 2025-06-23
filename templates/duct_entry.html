@@ -61,6 +61,11 @@
       color: white;
     }
 
+    tfoot td {
+      background-color: #eef;
+      font-weight: bold;
+    }
+
     @media (min-width: 768px) {
       form, .table-container {
         flex: 1;
@@ -197,45 +202,27 @@
           </tr>
           {% endfor %}
         </tbody>
+        <tfoot>
+          <tr>
+            <td colspan="8">Total</td>
+            <td>{{ total_qty }}</td>
+            <td></td>
+            <td></td>
+            <td>{{ "%.2f"|format(area_24g) }}</td>
+            <td>{{ "%.2f"|format(area_22g) }}</td>
+            <td>{{ "%.2f"|format(area_20g) }}</td>
+            <td>{{ "%.2f"|format(area_18g) }}</td>
+            <td>{{ "%.2f"|format(total_area) }}</td>
+            <td>{{ total_bolts }}</td>
+            <td>{{ total_cleat }}</td>
+            <td>{{ "%.2f"|format(total_gasket) }}</td>
+            <td>{{ total_corner }}</td>
+            <td></td>
+          </tr>
+        </tfoot>
       </table>
-
-      <!-- Summary Section -->
-      <hr>
-      <h3>Summary</h3>
-      <table>
-        <tr>
-          <th>Total Quantity</th>
-          <td>{{ total_qty }}</td>
-          <th>Total Area</th>
-          <td>{{ "%.2f"|format(total_area) }}</td>
-        </tr>
-        <tr>
-          <th>24g Area</th>
-          <td>{{ "%.2f"|format(area_24g) }}</td>
-          <th>22g Area</th>
-          <td>{{ "%.2f"|format(area_22g) }}</td>
-        </tr>
-        <tr>
-          <th>20g Area</th>
-          <td>{{ "%.2f"|format(area_20g) }}</td>
-          <th>18g Area</th>
-          <td>{{ "%.2f"|format(area_18g) }}</td>
-        </tr>
-        <tr>
-          <th>Total Cleat</th>
-          <td>{{ total_cleat }}</td>
-          <th>Total Nuts & Bolts</th>
-          <td>{{ total_bolts }}</td>
-        </tr>
-        <tr>
-          <th>Total Gasket (m)</th>
-          <td>{{ "%.2f"|format(total_gasket) }}</td>
-          <th>Total Corner Pieces</th>
-          <td>{{ total_corner }}</td>
-        </tr>
-      </table>
-
     </div>
+
   </div>
 </body>
 </html>
