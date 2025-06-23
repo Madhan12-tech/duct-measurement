@@ -13,7 +13,6 @@ def init_db():
     conn = sqlite3.connect('data.db')
     c = conn.cursor()
 
-    # Create tables
     c.execute('''
         CREATE TABLE IF NOT EXISTS projects (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -26,6 +25,7 @@ def init_db():
             timestamp DATETIME
         )
     ''')
+
     c.execute('''
         CREATE TABLE IF NOT EXISTS duct_entries (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -50,15 +50,11 @@ def init_db():
         )
     ''')
 
-    # Try to add missing columns
-    try:
-        c.execute("ALTER TABLE duct_entries ADD COLUMN factor REAL DEFAULT 1.0")
-    except sqlite3.OperationalError:
-        pass
-    try:
-        c.execute("ALTER TABLE duct_entries ADD COLUMN timestamp DATETIME")
-    except sqlite3.OperationalError:
-        pass
+    # Safe alter table (ignore if already exists)
+    try: c.execute("ALTER TABLE duct_entries ADD COLUMN factor REAL DEFAULT 1.0")
+    except: pass
+    try: c.execute("ALTER TABLE duct_entries ADD COLUMN timestamp DATETIME")
+    except: pass
 
     conn.commit()
     conn.close()
@@ -101,19 +97,22 @@ def home(project_id):
     entries = cursor.fetchall()
     conn.close()
 
-    def total(column): return sum(e[column] for e in entries)
-    def area_by_gauge(g): return sum(e[13] for e in entries if e[12] == g)
+    def safe_total(index):
+        return sum(float(e[index]) for e in entries if e[index] is not None)
+
+    def area_by_gauge(g):
+        return sum(e[13] for e in entries if e[12] == g)
 
     return render_template('duct_entry.html',
         project=project,
         entries=entries,
         project_id=project_id,
-        total_qty=total(9),
-        total_area=total(13),
-        total_bolts=total(14),
-        total_cleat=total(15),
-        total_gasket=total(16),
-        total_corner=total(17),
+        total_qty=safe_total(9),
+        total_area=safe_total(13),
+        total_bolts=safe_total(14),
+        total_cleat=safe_total(15),
+        total_gasket=safe_total(16),
+        total_corner=safe_total(17),
         area_24g=area_by_gauge('24g'),
         area_22g=area_by_gauge('22g'),
         area_20g=area_by_gauge('20g'),
@@ -126,7 +125,7 @@ def add_duct():
     id_ = form.get('id')
     project_id = int(form.get('project_id'))
     duct_type = form['duct_type']
-    factor = float(form.get('factor', 1.0)) if duct_type in ['RED', 'OFFSET', 'SHOE', 'ELB'] else 1.0
+    factor = float(form.get('factor') or 1.0) if duct_type in ['RED', 'OFFSET', 'SHOE', 'ELB'] else 1.0
 
     width1 = float(form['width1'])
     height1 = float(form['height1'])
@@ -212,20 +211,23 @@ def edit_duct(id):
     entries = cursor.fetchall()
     conn.close()
 
-    def total(column): return sum(e[column] for e in entries)
-    def area_by_gauge(g): return sum(e[13] for e in entries if e[12] == g)
+    def safe_total(index):
+        return sum(float(e[index]) for e in entries if e[index] is not None)
+
+    def area_by_gauge(g):
+        return sum(e[13] for e in entries if e[12] == g)
 
     return render_template('duct_entry.html',
         edit_entry=entry,
         project=project,
         entries=entries,
         project_id=project_id,
-        total_qty=total(9),
-        total_area=total(13),
-        total_bolts=total(14),
-        total_cleat=total(15),
-        total_gasket=total(16),
-        total_corner=total(17),
+        total_qty=safe_total(9),
+        total_area=safe_total(13),
+        total_bolts=safe_total(14),
+        total_cleat=safe_total(15),
+        total_gasket=safe_total(16),
+        total_corner=safe_total(17),
         area_24g=area_by_gauge('24g'),
         area_22g=area_by_gauge('22g'),
         area_20g=area_by_gauge('20g'),
