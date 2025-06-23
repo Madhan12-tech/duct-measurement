@@ -7,3 +7,4 @@ reportlab
 openpyxl
 Flask
 reportlab
+pandas
