@@ -61,31 +61,10 @@ def home():
     conn.close()
     return render_template('duct_entry.html', project=project, entries=entries)
 
-@app.route('/save_project', methods=['POST'])
-def save_project():
-    data = (
-        request.form['project_name'],
-        request.form['enquiry_no'],
-        request.form['office_no'],
-        request.form['site_engineer'],
-        request.form['site_contact'],
-        request.form['location'],
-        datetime.now()
-    )
-    conn = sqlite3.connect('data.db')
-    cursor = conn.cursor()
-    cursor.execute('''
-        INSERT INTO projects (project_name, enquiry_no, office_no, site_engineer, site_contact, location, timestamp)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-    ''', data)
-    conn.commit()
-    conn.close()
-    flash('Project saved successfully!')
-    return redirect(url_for('home'))
-
 @app.route('/add_duct', methods=['POST'])
 def add_duct():
     form = request.form
+    id_ = form.get('id')
     duct_no = form['duct_no']
     duct_type = form['duct_type']
     width1 = float(form['width1'])
@@ -123,27 +102,40 @@ def add_duct():
     else:
         area = 0
 
-    cleat = {'24g': 4, '22g': 8, '20g': 10, '18g': 12}.get(gauge, 0) * quantity
+    if gauge == '24g': cleat = quantity * 4
+    elif gauge == '22g': cleat = quantity * 8
+    elif gauge == '20g': cleat = quantity * 10
+    elif gauge == '18g': cleat = quantity * 12
+    else: cleat = 0
+
     nuts_bolts = quantity * 4
     gasket = (width1 + height1 + width2 + height2) / 1000 * quantity
     corner_pieces = 0 if duct_type == 'DUM' else quantity * 8
 
     conn = sqlite3.connect('data.db')
     cursor = conn.cursor()
-    cursor.execute('''
-        INSERT INTO duct_entries (
-            duct_no, duct_type, width1, height1, width2, height2, length_or_radius,
-            quantity, degree_or_offset, gauge, area, nuts_bolts, cleat,
-            gasket, corner_pieces, timestamp
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    ''', (
-        duct_no, duct_type, width1, height1, width2, height2, length_or_radius,
-        quantity, degree_or_offset, gauge, area, nuts_bolts, cleat,
-        gasket, corner_pieces, datetime.now()
-    ))
+
+    if id_:
+        cursor.execute('''
+            UPDATE duct_entries SET duct_no=?, duct_type=?, width1=?, height1=?, width2=?, height2=?,
+            length_or_radius=?, quantity=?, degree_or_offset=?, gauge=?, area=?, nuts_bolts=?, cleat=?,
+            gasket=?, corner_pieces=?, timestamp=?
+            WHERE id=?
+        ''', (duct_no, duct_type, width1, height1, width2, height2, length_or_radius, quantity, degree_or_offset,
+              gauge, area, nuts_bolts, cleat, gasket, corner_pieces, datetime.now(), id_))
+        flash('Duct entry updated!')
+    else:
+        cursor.execute('''
+            INSERT INTO duct_entries (
+                duct_no, duct_type, width1, height1, width2, height2, length_or_radius, quantity,
+                degree_or_offset, gauge, area, nuts_bolts, cleat, gasket, corner_pieces, timestamp
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (duct_no, duct_type, width1, height1, width2, height2, length_or_radius, quantity, degree_or_offset,
+              gauge, area, nuts_bolts, cleat, gasket, corner_pieces, datetime.now()))
+        flash('Duct entry added!')
+
     conn.commit()
     conn.close()
-    flash('Duct entry added!')
     return redirect(url_for('home'))
 
 @app.route('/edit/<int:id>')
@@ -174,5 +166,5 @@ def submit_all():
     flash('All duct entries submitted successfully!')
     return redirect(url_for('home'))
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     app.run(debug=True)
