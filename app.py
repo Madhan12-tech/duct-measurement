@@ -1,9 +1,6 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, send_file
+from flask import Flask, render_template, request, redirect, url_for, flash
 import sqlite3
 from datetime import datetime
-import io
-import xlsxwriter
-from reportlab.pdfgen import canvas
 
 app = Flask(__name__)
 app.secret_key = 'secretkey'
@@ -12,6 +9,7 @@ def init_db():
     conn = sqlite3.connect('data.db')
     c = conn.cursor()
 
+    # Create duct_entries table
     c.execute('''
         CREATE TABLE IF NOT EXISTS duct_entries (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -34,6 +32,7 @@ def init_db():
         )
     ''')
 
+    # Create projects table
     c.execute('''
         CREATE TABLE IF NOT EXISTS projects (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -64,21 +63,8 @@ def home():
     project = cursor.fetchone()
     cursor.execute("SELECT * FROM duct_entries ORDER BY id DESC")
     entries = cursor.fetchall()
-
-    # Totals
-    cursor.execute("SELECT SUM(quantity), SUM(area), SUM(nuts_bolts), SUM(cleat), SUM(gasket), SUM(corner_pieces) FROM duct_entries")
-    total = cursor.fetchone()
-    total_data = {
-        'total_qty': total[0] or 0,
-        'total_area': round(total[1] or 0, 2),
-        'total_bolts': total[2] or 0,
-        'total_cleat': total[3] or 0,
-        'total_gasket': round(total[4] or 0, 2),
-        'total_corners': total[5] or 0
-    }
-
     conn.close()
-    return render_template('duct_entry.html', project=project, entries=entries, total=total_data)
+    return render_template('duct_entry.html', project=project, entries=entries)
 
 @app.route('/save_project', methods=['POST'])
 def save_project():
@@ -105,6 +91,7 @@ def save_project():
 @app.route('/add_duct', methods=['POST'])
 def add_duct():
     form = request.form
+    duct_id = form.get('id')
     duct_no = form['duct_no']
     duct_type = form['duct_type']
     width1 = float(form['width1'])
@@ -115,6 +102,7 @@ def add_duct():
     quantity = int(form['quantity'])
     degree_or_offset = float(form['degree_or_offset'] or 0)
 
+    # Gauge
     size_sum = width1 + height1
     if size_sum <= 750:
         gauge = '24g'
@@ -125,6 +113,7 @@ def add_duct():
     else:
         gauge = '18g'
 
+    # Area based on duct_type
     if duct_type == 'ST':
         area = 2 * (width1 / 1000 + height1 / 1000) * (length_or_radius / 1000) * quantity
     elif duct_type == 'RED':
@@ -142,11 +131,8 @@ def add_duct():
     else:
         area = 0
 
-    if gauge == '24g': cleat = quantity * 4
-    elif gauge == '22g': cleat = quantity * 8
-    elif gauge == '20g': cleat = quantity * 10
-    elif gauge == '18g': cleat = quantity * 12
-    else: cleat = 0
+    # Cleat
+    cleat = {'24g': quantity * 4, '22g': quantity * 8, '20g': quantity * 10, '18g': quantity * 12}.get(gauge, 0)
 
     nuts_bolts = quantity * 4
     gasket = (width1 + height1 + width2 + height2) / 1000 * quantity
@@ -154,18 +140,34 @@ def add_duct():
 
     conn = sqlite3.connect('data.db')
     cursor = conn.cursor()
-    cursor.execute('''
-        INSERT INTO duct_entries (
-            duct_no, duct_type, width1, height1, width2, height2, length_or_radius, quantity, degree_or_offset,
-            gauge, area, nuts_bolts, cleat, gasket, corner_pieces, timestamp
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    ''', (
-        duct_no, duct_type, width1, height1, width2, height2, length_or_radius, quantity, degree_or_offset,
-        gauge, area, nuts_bolts, cleat, gasket, corner_pieces, datetime.now()
-    ))
+
+    if duct_id:  # Update
+        cursor.execute('''
+            UPDATE duct_entries SET 
+                duct_no=?, duct_type=?, width1=?, height1=?, width2=?, height2=?,
+                length_or_radius=?, quantity=?, degree_or_offset=?, gauge=?, area=?,
+                nuts_bolts=?, cleat=?, gasket=?, corner_pieces=?, timestamp=?
+            WHERE id=?
+        ''', (
+            duct_no, duct_type, width1, height1, width2, height2,
+            length_or_radius, quantity, degree_or_offset, gauge, area,
+            nuts_bolts, cleat, gasket, corner_pieces, datetime.now(), duct_id
+        ))
+        flash('Duct entry updated!')
+    else:  # Insert
+        cursor.execute('''
+            INSERT INTO duct_entries (
+                duct_no, duct_type, width1, height1, width2, height2, length_or_radius, quantity,
+                degree_or_offset, gauge, area, nuts_bolts, cleat, gasket, corner_pieces, timestamp
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (
+            duct_no, duct_type, width1, height1, width2, height2, length_or_radius, quantity,
+            degree_or_offset, gauge, area, nuts_bolts, cleat, gasket, corner_pieces, datetime.now()
+        ))
+        flash('Duct entry added!')
+
     conn.commit()
     conn.close()
-    flash('Duct entry added!')
     return redirect(url_for('home'))
 
 @app.route('/edit/<int:id>')
@@ -174,8 +176,12 @@ def edit_duct(id):
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM duct_entries WHERE id=?", (id,))
     entry = cursor.fetchone()
+    cursor.execute("SELECT * FROM projects ORDER BY id DESC LIMIT 1")
+    project = cursor.fetchone()
+    cursor.execute("SELECT * FROM duct_entries ORDER BY id DESC")
+    entries = cursor.fetchall()
     conn.close()
-    return render_template('duct_entry.html', edit_entry=entry)
+    return render_template('duct_entry.html', project=project, entries=entries, edit_entry=entry)
 
 @app.route('/delete/<int:id>')
 def delete_duct(id):
@@ -191,52 +197,3 @@ def delete_duct(id):
 def submit_all():
     flash('All duct entries submitted successfully!')
     return redirect(url_for('home'))
-
-@app.route('/export_excel')
-def export_excel():
-    conn = sqlite3.connect('data.db')
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM duct_entries")
-    data = cursor.fetchall()
-
-    output = io.BytesIO()
-    workbook = xlsxwriter.Workbook(output)
-    worksheet = workbook.add_worksheet()
-
-    headers = ['ID', 'Duct No', 'Type', 'W1', 'H1', 'W2', 'H2', 'Length/Radius', 'Qty', 'Degree/Offset', 'Gauge', 'Area', 'Nuts & Bolts', 'Cleat', 'Gasket', 'Corner Pieces']
-    for col, header in enumerate(headers):
-        worksheet.write(0, col, header)
-
-    for row_num, row in enumerate(data, 1):
-        for col_num, value in enumerate(row[:-1]):  # skip timestamp
-            worksheet.write(row_num, col_num, value)
-
-    workbook.close()
-    output.seek(0)
-    return send_file(output, download_name="duct_entries.xlsx", as_attachment=True)
-
-@app.route('/export_pdf')
-def export_pdf():
-    conn = sqlite3.connect('data.db')
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM duct_entries")
-    data = cursor.fetchall()
-
-    output = io.BytesIO()
-    pdf = canvas.Canvas(output)
-    pdf.setFont("Helvetica", 9)
-    y = 800
-    pdf.drawString(30, y, "Duct Entries Report")
-    y -= 20
-
-    for entry in data:
-        text = f"{entry[0]} | {entry[1]} | {entry[2]} | {entry[3]}x{entry[4]} | {entry[5]}x{entry[6]} | L:{entry[7]} | Qty:{entry[8]} | G:{entry[10]} | A:{entry[11]} | B:{entry[12]} | C:{entry[13]} | Gk:{entry[14]} | Cp:{entry[15]}"
-        pdf.drawString(30, y, text)
-        y -= 12
-        if y < 50:
-            pdf.showPage()
-            y = 800
-
-    pdf.save()
-    output.seek(0)
-    return send_file(output, download_name="duct_entries.pdf", as_attachment=True)
