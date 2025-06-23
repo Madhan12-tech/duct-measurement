@@ -3,33 +3,13 @@
 <head>
   <title>Duct Entry</title>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      padding: 20px;
-    }
-    .container {
-      display: flex;
-      gap: 20px;
-    }
-    form {
-      flex: 1;
-    }
-    table {
-      flex: 2;
-      width: 100%;
-      border-collapse: collapse;
-    }
-    th, td {
-      border: 1px solid #999;
-      padding: 8px;
-      text-align: center;
-    }
-    th {
-      background-color: #f2f2f2;
-    }
-    .actions {
-      margin-top: 10px;
-    }
+    body { font-family: Arial, sans-serif; padding: 20px; }
+    .container { display: flex; gap: 20px; }
+    form { flex: 1; }
+    table { flex: 2; width: 100%; border-collapse: collapse; }
+    th, td { border: 1px solid #999; padding: 8px; text-align: center; }
+    th { background-color: #f2f2f2; }
+    .actions { margin-top: 10px; }
   </style>
 </head>
 <body>
@@ -54,7 +34,7 @@
 
   <div class="container">
 
-    <!-- Left: Duct Entry Form -->
+    <!-- Left Form -->
     <form action="/add_duct" method="POST">
       <h3>Duct Entry</h3>
       <input type="text" name="duct_no" placeholder="Duct No" required><br><br>
@@ -78,7 +58,7 @@
       <button type="submit">Add</button>
     </form>
 
-    <!-- Right: Table of Duct Entries -->
+    <!-- Right Table -->
     <div>
       <h3>Live Entries</h3>
       <div class="actions">
@@ -103,10 +83,14 @@
             <th>H1</th>
             <th>W2</th>
             <th>H2</th>
-            <th>Length/Radius</th>
+            <th>L/R</th>
             <th>Qty</th>
-            <th>Degree/Offset</th>
+            <th>D/O</th>
             <th>Gauge</th>
+            <th>24g</th>
+            <th>22g</th>
+            <th>20g</th>
+            <th>18g</th>
             <th>Area (m²)</th>
             <th>Nuts & Bolts</th>
             <th>Cleat</th>
@@ -129,6 +113,10 @@
             <td>{{ entry[8] }}</td>
             <td>{{ entry[9] }}</td>
             <td>{{ entry[10] }}</td>
+            <td>{{ entry[16] }}</td>
+            <td>{{ entry[17] }}</td>
+            <td>{{ entry[18] }}</td>
+            <td>{{ entry[19] }}</td>
             <td>{{ "%.2f"|format(entry[11]) }}</td>
             <td>{{ entry[12] }}</td>
             <td>{{ entry[13] }}</td>
@@ -148,5 +136,3 @@
 
 </body>
 </html>
-
-
