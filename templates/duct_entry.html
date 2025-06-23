@@ -3,199 +3,191 @@
 <head>
   <meta charset="UTF-8">
   <title>Duct Entry</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
   <style>
     body.dark-mode {
       background-color: #121212;
-      color: #ffffff;
-    }
-    .dark-mode .card {
-      background-color: #1e1e1e;
-      color: #ffffff;
-    }
-    .dark-mode .table {
-      color: #ffffff;
-    }
-    th {
-      background-color: #0d6efd;
       color: white;
     }
-    tfoot td {
-      background-color: #e7f1ff;
-      font-weight: bold;
+    .dark-mode input, .dark-mode select {
+      background-color: #1e1e1e;
+      color: white;
+      border: 1px solid #555;
+    }
+    .form-section {
+      border: 1px solid #ccc;
+      padding: 15px;
+      border-radius: 5px;
+      margin-bottom: 20px;
+    }
+    .dark-toggle {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      z-index: 999;
     }
   </style>
-  <script>
-    function toggleDarkMode() {
-      document.body.classList.toggle("dark-mode");
-      localStorage.setItem("darkMode", document.body.classList.contains("dark-mode"));
-    }
-    window.onload = () => {
-      if (localStorage.getItem("darkMode") === "true") {
-        document.body.classList.add("dark-mode");
-      }
-    };
-    function filterTable() {
-      const input = document.getElementById("searchInput").value.toLowerCase();
-      const rows = document.querySelectorAll("#entriesTable tbody tr");
-      rows.forEach(row => {
-        row.style.display = row.innerText.toLowerCase().includes(input) ? "" : "none";
-      });
-    }
-  </script>
 </head>
 <body>
-<div class="container py-3">
+<div class="container mt-4">
+  <button class="btn btn-sm btn-secondary dark-toggle" onclick="toggleDarkMode()">🌙</button>
 
-  <div class="d-flex justify-content-between mb-3">
-    <h4>Duct Measurement Sheet</h4>
-    <button class="btn btn-sm btn-secondary" onclick="toggleDarkMode()">🌓 Dark Mode</button>
-  </div>
+  <h4>Project: {{ project[1] }} | Engineer: {{ project[4] }}</h4>
+  <p><strong>Enquiry:</strong> {{ project[2] }} | <strong>Office No:</strong> {{ project[3] }} | <strong>Contact:</strong> {{ project[5] }} | <strong>Location:</strong> {{ project[6] }}</p>
 
-  {% with messages = get_flashed_messages() %}
-    {% if messages %}
-      <div class="alert alert-success">
-        {% for message in messages %}
-          <div>{{ message }}</div>
-        {% endfor %}
-      </div>
+  <form action="{{ url_for('add_duct') }}" method="POST" class="form-section">
+    <input type="hidden" name="project_id" value="{{ project_id }}">
+    {% if edit_entry %}
+      <input type="hidden" name="id" value="{{ edit_entry[0] }}">
     {% endif %}
-  {% endwith %}
-
-  <div class="card mb-3">
-    <div class="card-body">
-      {% if project %}
-        <h5 class="card-title">{{ project[1] }}</h5>
-        <p>Enquiry: {{ project[2] }}, Office: {{ project[3] }},
-        Engineer: {{ project[4] }}, Contact: {{ project[5] }},
-        Location: {{ project[6] }}</p>
-      {% else %}
-        <p>No project selected</p>
-      {% endif %}
-    </div>
-  </div>
-
-  <div class="row">
-    <!-- Form -->
-    <div class="col-md-4">
-      <div class="card">
-        <div class="card-header bg-primary text-white">
-          {{ edit_entry and "Edit Duct Entry" or "Add Duct Entry" }}
-        </div>
-        <div class="card-body">
-          <form method="POST" action="/add_duct">
-            <input type="hidden" name="id" value="{{ edit_entry[0] if edit_entry else '' }}">
-            <input type="hidden" name="project_id" value="{{ project_id }}">
-
-            <div class="mb-2"><input class="form-control" name="duct_no" placeholder="Duct No" required value="{{ edit_entry[2] if edit_entry else '' }}"></div>
-
-            <div class="mb-2">
-              <select class="form-select" name="duct_type" required id="duct_type" onchange="toggleFactorField()">
-                <option value="">Select Duct Type</option>
-                {% for t in ['ST','SHOE','RED','OFFSET','DUM','ELB','VANES'] %}
-                  <option value="{{ t }}" {% if edit_entry and edit_entry[3] == t %}selected{% endif %}>{{ t }}</option>
-                {% endfor %}
-              </select>
-            </div>
-
-            {% set fields = ['width1','height1','width2','height2','length_or_radius','quantity','degree_or_offset'] %}
-            {% for i in range(4, 11) %}
-              <div class="mb-2">
-                <input class="form-control" type="number" step="any" name="{{ fields[loop.index0] }}"
-                placeholder="{{ fields[loop.index0]|replace('_',' ')|title }}" value="{{ edit_entry[i] if edit_entry else '' }}">
-              </div>
-            {% endfor %}
-
-            <div class="mb-2" id="factor_field" style="display: none;">
-              <input class="form-control" type="number" step="any" name="factor" placeholder="Factor" value="{{ edit_entry[11] if edit_entry else '1.5' }}">
-            </div>
-
-            <button type="submit" class="btn btn-success w-100">
-              <i class="fa fa-check"></i> {{ edit_entry and "Update" or "Add" }}
-            </button>
-          </form>
-        </div>
+    <div class="row">
+      <div class="col-md-2">
+        <label>Duct No</label>
+        <input type="text" name="duct_no" class="form-control" required value="{{ edit_entry[2] if edit_entry else '' }}">
+      </div>
+      <div class="col-md-2">
+        <label>Type</label>
+        <select name="duct_type" class="form-control" onchange="toggleFactor(this.value)" required>
+          {% set types = ['ST', 'RED', 'DUM', 'OFFSET', 'SHOE', 'VANES', 'ELB'] %}
+          {% for t in types %}
+            <option value="{{ t }}" {% if edit_entry and edit_entry[3]==t %}selected{% endif %}>{{ t }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-2">
+        <label>Width 1</label>
+        <input type="number" step="any" name="width1" class="form-control" required value="{{ edit_entry[4] if edit_entry else '' }}">
+      </div>
+      <div class="col-md-2">
+        <label>Height 1</label>
+        <input type="number" step="any" name="height1" class="form-control" required value="{{ edit_entry[5] if edit_entry else '' }}">
+      </div>
+      <div class="col-md-2">
+        <label>Width 2</label>
+        <input type="number" step="any" name="width2" class="form-control" value="{{ edit_entry[6] if edit_entry else '' }}">
+      </div>
+      <div class="col-md-2">
+        <label>Height 2</label>
+        <input type="number" step="any" name="height2" class="form-control" value="{{ edit_entry[7] if edit_entry else '' }}">
       </div>
     </div>
 
-    <!-- Table -->
-    <div class="col-md-8">
-      <div class="card">
-        <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
-          <span><i class="fa fa-table"></i> Entries</span>
-          <input class="form-control form-control-sm w-50" id="searchInput" onkeyup="filterTable()" placeholder="Search...">
-        </div>
-        <div class="card-body p-2">
-          <div class="d-flex gap-2 mb-2 flex-wrap">
-            <form method="get" action="/export_excel/{{ project_id }}"><button class="btn btn-outline-success btn-sm"><i class="fa fa-file-excel"></i> Excel</button></form>
-            <form method="get" action="/export_pdf/{{ project_id }}"><button class="btn btn-outline-danger btn-sm"><i class="fa fa-file-pdf"></i> PDF</button></form>
-            <button onclick="window.print()" class="btn btn-outline-secondary btn-sm"><i class="fa fa-print"></i> Print</button>
-          </div>
-
-          <div class="table-responsive">
-            <table class="table table-bordered table-sm" id="entriesTable">
-              <thead>
-                <tr>
-                  <th>#</th><th>Duct No</th><th>Type</th><th>W1</th><th>H1</th><th>W2</th><th>H2</th><th>L/R</th>
-                  <th>Qty</th><th>Deg/Off</th><th>Gauge</th><th>Factor</th>
-                  <th>24g</th><th>22g</th><th>20g</th><th>18g</th>
-                  <th>Area</th><th>Bolts</th><th>Cleat</th><th>Gasket</th><th>Corner</th><th>Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {% for e in entries %}
-                <tr>
-                  <td>{{ loop.index }}</td>
-                  <td>{{ e[2] }}</td><td>{{ e[3] }}</td><td>{{ e[4] }}</td><td>{{ e[5] }}</td>
-                  <td>{{ e[6] }}</td><td>{{ e[7] }}</td><td>{{ e[8] }}</td><td>{{ e[9] }}</td>
-                  <td>{{ e[10] }}</td><td>{{ e[12] }}</td><td>{{ e[11] }}</td>
-                  <td>{{ "%.2f"|format(e[13]) if e[12] == '24g' else '' }}</td>
-                  <td>{{ "%.2f"|format(e[13]) if e[12] == '22g' else '' }}</td>
-                  <td>{{ "%.2f"|format(e[13]) if e[12] == '20g' else '' }}</td>
-                  <td>{{ "%.2f"|format(e[13]) if e[12] == '18g' else '' }}</td>
-                  <td>{{ "%.2f"|format(e[13]) }}</td>
-                  <td>{{ e[14] }}</td><td>{{ e[15] }}</td><td>{{ "%.2f"|format(e[16]) }}</td><td>{{ e[17] }}</td>
-                  <td>
-                    <a href="/edit/{{ e[0] }}" class="text-primary"><i class="fa fa-edit"></i></a>
-                    <a href="/delete/{{ e[0] }}" onclick="return confirm('Delete?')" class="text-danger"><i class="fa fa-trash"></i></a>
-                  </td>
-                </tr>
-                {% endfor %}
-              </tbody>
-              <tfoot>
-                <tr>
-                  <td colspan="8"><strong>Total</strong></td>
-                  <td>{{ total_qty }}</td><td></td><td></td><td></td>
-                  <td>{{ "%.2f"|format(area_24g) }}</td>
-                  <td>{{ "%.2f"|format(area_22g) }}</td>
-                  <td>{{ "%.2f"|format(area_20g) }}</td>
-                  <td>{{ "%.2f"|format(area_18g) }}</td>
-                  <td>{{ "%.2f"|format(total_area) }}</td>
-                  <td>{{ total_bolts }}</td>
-                  <td>{{ total_cleat }}</td>
-                  <td>{{ "%.2f"|format(total_gasket) }}</td>
-                  <td>{{ total_corner }}</td><td></td>
-                </tr>
-              </tfoot>
-            </table>
-          </div>
-
-        </div>
+    <div class="row mt-2">
+      <div class="col-md-2">
+        <label>Length/Radius</label>
+        <input type="number" step="any" name="length_or_radius" class="form-control" required value="{{ edit_entry[8] if edit_entry else '' }}">
+      </div>
+      <div class="col-md-2">
+        <label>Qty</label>
+        <input type="number" name="quantity" class="form-control" required value="{{ edit_entry[9] if edit_entry else '' }}">
+      </div>
+      <div class="col-md-2">
+        <label>Degree/Offset</label>
+        <input type="number" step="any" name="degree_or_offset" class="form-control" value="{{ edit_entry[10] if edit_entry else '' }}">
+      </div>
+      <div class="col-md-2" id="factorCol">
+        <label>Factor</label>
+        <select name="factor" class="form-control">
+          {% for f in [1, 1.25, 1.5, 2] %}
+            <option value="{{ f }}" {% if edit_entry and edit_entry[11]==f %}selected{% endif %}>{{ f }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-4">
+        <label style="visibility: hidden;">Submit</label><br>
+        <button class="btn btn-success" type="submit">{{ 'Update' if edit_entry else 'Add' }}</button>
+        {% if edit_entry %}
+          <a href="{{ url_for('home', project_id=project_id) }}" class="btn btn-warning">Cancel Edit</a>
+        {% endif %}
       </div>
     </div>
-  </div>
+  </form>
+
+  <h5 class="mt-4">Duct Entries</h5>
+  <table class="table table-bordered table-sm table-striped">
+    <thead class="thead-dark">
+      <tr>
+        <th>Duct No</th>
+        <th>Type</th>
+        <th>W1</th>
+        <th>H1</th>
+        <th>W2</th>
+        <th>H2</th>
+        <th>Length/Radius</th>
+        <th>Qty</th>
+        <th>Deg/Off</th>
+        <th>Factor</th>
+        <th>Gauge</th>
+        <th>Area</th>
+        <th>Bolts</th>
+        <th>Cleat</th>
+        <th>Gasket</th>
+        <th>Corner</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for e in entries %}
+        <tr>
+          <td>{{ e[2] }}</td>
+          <td>{{ e[3] }}</td>
+          <td>{{ e[4] }}</td>
+          <td>{{ e[5] }}</td>
+          <td>{{ e[6] }}</td>
+          <td>{{ e[7] }}</td>
+          <td>{{ e[8] }}</td>
+          <td>{{ e[9] }}</td>
+          <td>{{ e[10] }}</td>
+          <td>{{ e[11] }}</td>
+          <td>{{ e[12] }}</td>
+          <td>{{ '%.2f'|format(e[13]) }}</td>
+          <td>{{ e[14] }}</td>
+          <td>{{ e[15] }}</td>
+          <td>{{ '%.2f'|format(e[16]) }}</td>
+          <td>{{ e[17] }}</td>
+          <td>
+            <a href="{{ url_for('edit_duct', id=e[0]) }}" class="btn btn-sm btn-info">Edit</a>
+            <a href="{{ url_for('delete_duct', id=e[0]) }}" class="btn btn-sm btn-danger" onclick="return confirm('Delete this entry?')">Delete</a>
+          </td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <h6 class="mt-4">Summary</h6>
+  <ul>
+    <li>Total Quantity: {{ total_qty }}</li>
+    <li>Total Area: {{ '%.2f'|format(total_area) }}</li>
+    <li>Total Bolts: {{ total_bolts }}</li>
+    <li>Total Cleats: {{ total_cleat }}</li>
+    <li>Total Gasket (m): {{ '%.2f'|format(total_gasket) }}</li>
+    <li>Total Corners: {{ total_corner }}</li>
+  </ul>
+  <ul>
+    <li>Area 24g: {{ '%.2f'|format(area_24g) }}</li>
+    <li>Area 22g: {{ '%.2f'|format(area_22g) }}</li>
+    <li>Area 20g: {{ '%.2f'|format(area_20g) }}</li>
+    <li>Area 18g: {{ '%.2f'|format(area_18g) }}</li>
+  </ul>
+
+  <a href="{{ url_for('export_excel', project_id=project_id) }}" class="btn btn-sm btn-success">Export Excel</a>
+  <a href="{{ url_for('export_pdf', project_id=project_id) }}" class="btn btn-sm btn-danger">Export PDF</a>
 </div>
 
 <script>
-  function toggleFactorField() {
-    const type = document.getElementById("duct_type").value;
-    document.getElementById("factor_field").style.display = ["RED", "OFFSET", "SHOE", "ELB"].includes(type) ? 'block' : 'none';
+  function toggleFactor(type) {
+    const show = ['RED', 'OFFSET', 'SHOE', 'ELB'].includes(type);
+    document.getElementById('factorCol').style.display = show ? 'block' : 'none';
   }
-  toggleFactorField();
-</script>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  window.onload = function () {
+    const select = document.querySelector('select[name="duct_type"]');
+    if (select) toggleFactor(select.value);
+  };
+
+  function toggleDarkMode() {
+    document.body.classList.toggle('dark-mode');
+  }
+</script>
 </body>
 </html>
