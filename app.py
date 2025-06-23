@@ -12,6 +12,8 @@ app.secret_key = 'secretkey'
 def init_db():
     conn = sqlite3.connect('data.db')
     c = conn.cursor()
+
+    # Create projects table
     c.execute('''
         CREATE TABLE IF NOT EXISTS projects (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -24,6 +26,8 @@ def init_db():
             timestamp DATETIME
         )
     ''')
+
+    # Create duct_entries table
     c.execute('''
         CREATE TABLE IF NOT EXISTS duct_entries (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -37,7 +41,7 @@ def init_db():
             length_or_radius REAL,
             quantity INTEGER,
             degree_or_offset REAL,
-            factor REAL,
+            factor REAL DEFAULT 1.0,
             gauge TEXT,
             area REAL,
             nuts_bolts INTEGER,
@@ -47,6 +51,17 @@ def init_db():
             timestamp DATETIME
         )
     ''')
+
+    # Safely add missing columns
+    try:
+        c.execute("ALTER TABLE duct_entries ADD COLUMN factor REAL DEFAULT 1.0")
+    except sqlite3.OperationalError:
+        pass
+    try:
+        c.execute("ALTER TABLE duct_entries ADD COLUMN timestamp DATETIME")
+    except sqlite3.OperationalError:
+        pass
+
     conn.commit()
     conn.close()
 
@@ -189,6 +204,9 @@ def edit_duct(id):
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM duct_entries WHERE id=?", (id,))
     entry = cursor.fetchone()
+    if not entry:
+        flash("Entry not found!")
+        return redirect(url_for('index'))
     project_id = entry[1]
     cursor.execute("SELECT * FROM projects WHERE id=?", (project_id,))
     project = cursor.fetchone()
