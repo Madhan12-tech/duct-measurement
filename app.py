@@ -8,7 +8,6 @@ app.secret_key = 'secretkey'
 def init_db():
     conn = sqlite3.connect('data.db')
     c = conn.cursor()
-
     c.execute('''
         CREATE TABLE IF NOT EXISTS duct_entries (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -30,7 +29,6 @@ def init_db():
             timestamp DATETIME
         )
     ''')
-
     c.execute('''
         CREATE TABLE IF NOT EXISTS projects (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -43,7 +41,6 @@ def init_db():
             timestamp DATETIME
         )
     ''')
-
     conn.commit()
     conn.close()
 
@@ -126,12 +123,7 @@ def add_duct():
     else:
         area = 0
 
-    if gauge == '24g': cleat = quantity * 4
-    elif gauge == '22g': cleat = quantity * 8
-    elif gauge == '20g': cleat = quantity * 10
-    elif gauge == '18g': cleat = quantity * 12
-    else: cleat = 0
-
+    cleat = {'24g': 4, '22g': 8, '20g': 10, '18g': 12}.get(gauge, 0) * quantity
     nuts_bolts = quantity * 4
     gasket = (width1 + height1 + width2 + height2) / 1000 * quantity
     corner_pieces = 0 if duct_type == 'DUM' else quantity * 8
@@ -140,12 +132,14 @@ def add_duct():
     cursor = conn.cursor()
     cursor.execute('''
         INSERT INTO duct_entries (
-            duct_no, duct_type, width1, height1, width2, height2, length_or_radius, quantity, degree_or_offset,
-            gauge, area, nuts_bolts, cleat, gasket, corner_pieces, timestamp
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            duct_no, duct_type, width1, height1, width2, height2, length_or_radius,
+            quantity, degree_or_offset, gauge, area, nuts_bolts, cleat,
+            gasket, corner_pieces, timestamp
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ''', (
-        duct_no, duct_type, width1, height1, width2, height2, length_or_radius, quantity, degree_or_offset,
-        gauge, area, nuts_bolts, cleat, gasket, corner_pieces, datetime.now()
+        duct_no, duct_type, width1, height1, width2, height2, length_or_radius,
+        quantity, degree_or_offset, gauge, area, nuts_bolts, cleat,
+        gasket, corner_pieces, datetime.now()
     ))
     conn.commit()
     conn.close()
@@ -179,5 +173,6 @@ def delete_duct(id):
 def submit_all():
     flash('All duct entries submitted successfully!')
     return redirect(url_for('home'))
+
 if __name__ == "__main__":
     app.run(debug=True)
