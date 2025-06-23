@@ -52,6 +52,7 @@ def init_db():
         )
     ''')
 
+    # Safely add missing columns
     try:
         c.execute("ALTER TABLE duct_entries ADD COLUMN factor REAL DEFAULT 1.0")
     except sqlite3.OperationalError:
@@ -182,7 +183,7 @@ def add_duct():
                 project_id, form['duct_no'], duct_type, width1, height1, width2, height2, length_or_radius,
                 quantity, degree_or_offset, factor, gauge, area, nuts_bolts, cleat, gasket, corner_pieces, datetime.now(), id_
             ))
-            flash('Duct entry updated!')
+            flash('✅ Duct entry updated!')
         else:
             cursor.execute('''
                 INSERT INTO duct_entries (project_id, duct_no, duct_type, width1, height1, width2, height2, length_or_radius,
@@ -192,14 +193,16 @@ def add_duct():
                 project_id, form['duct_no'], duct_type, width1, height1, width2, height2, length_or_radius,
                 quantity, degree_or_offset, factor, gauge, area, nuts_bolts, cleat, gasket, corner_pieces, datetime.now()
             ))
-            flash('Duct entry added!')
+            flash('✅ Duct entry added!')
 
         conn.commit()
         conn.close()
         return redirect(url_for('home', project_id=project_id))
 
     except Exception as e:
-        return f"<h3 style='color:red;'>❌ Internal Error: {e}</h3>"
+        import traceback
+        traceback.print_exc()
+        return f"<h2 style='color:red;'>❌ Internal Server Error</h2><pre>{e}</pre>"
 
 @app.route('/edit/<int:id>')
 def edit_duct(id):
@@ -227,7 +230,7 @@ def delete_duct(id):
     cursor.execute("DELETE FROM duct_entries WHERE id=?", (id,))
     conn.commit()
     conn.close()
-    flash("Duct entry deleted!")
+    flash("❌ Duct entry deleted!")
     return redirect(url_for('home', project_id=project_id))
 
 @app.route('/export_excel/<int:project_id>')
