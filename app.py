@@ -1,6 +1,10 @@
-from flask import Flask, render_template, request, redirect, url_for, flash
+from flask import Flask, render_template, request, redirect, url_for, flash, send_file
 import sqlite3
 from datetime import datetime
+import pandas as pd
+from io import BytesIO
+from reportlab.lib.pagesizes import letter
+from reportlab.pdfgen import canvas
 
 app = Flask(__name__)
 app.secret_key = 'secretkey'
@@ -49,6 +53,28 @@ init_db()
 @app.route('/')
 def index():
     return render_template('home.html')
+
+@app.route('/save_project', methods=['POST'])
+def save_project():
+    form = request.form
+    conn = sqlite3.connect('data.db')
+    c = conn.cursor()
+    c.execute('''
+        INSERT INTO projects (project_name, enquiry_no, office_no, site_engineer, site_contact, location, timestamp)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+    ''', (
+        form['project_name'],
+        form['enquiry_no'],
+        form['office_no'],
+        form['site_engineer'],
+        form['site_contact'],
+        form['location'],
+        datetime.now()
+    ))
+    conn.commit()
+    conn.close()
+    flash('Project saved successfully!')
+    return redirect(url_for('home'))
 
 @app.route('/home')
 def home():
@@ -101,28 +127,35 @@ def add_duct():
     degree_or_offset = float(form['degree_or_offset'] or 0)
 
     size_sum = width1 + height1
-    gauge = '24g' if size_sum <= 750 else '22g' if size_sum <= 1200 else '20g' if size_sum <= 1800 else '18g'
+    if size_sum <= 750:
+        gauge = '24g'
+    elif size_sum <= 1200:
+        gauge = '22g'
+    elif size_sum <= 1800:
+        gauge = '20g'
+    else:
+        gauge = '18g'
 
     if duct_type == 'ST':
-        area = 2 * (width1/1000 + height1/1000) * (length_or_radius/1000) * quantity
+        area = 2 * (width1 + height1) / 1000 * (length_or_radius / 1000) * quantity
     elif duct_type == 'RED':
-        area = (width1 + height1 + width2 + height2)/1000 * (length_or_radius/1000) * quantity * 1.5
+        area = (width1 + height1 + width2 + height2) / 1000 * (length_or_radius / 1000) * quantity * 1.5
     elif duct_type == 'DUM':
         area = (width1 * height1) / 1_000_000 * quantity
     elif duct_type == 'OFFSET':
-        area = (width1 + height1 + width2 + height2)/1000 * ((length_or_radius + degree_or_offset)/1000) * quantity * 1.5
+        area = (width1 + height1 + width2 + height2) / 1000 * ((length_or_radius + degree_or_offset) / 1000) * quantity * 1.5
     elif duct_type == 'SHOE':
-        area = (width1 + height1) * 2 / 1000 * (length_or_radius/1000) * quantity * 1.5
+        area = (width1 + height1) * 2 / 1000 * (length_or_radius / 1000) * quantity * 1.5
     elif duct_type == 'VANES':
         area = width1 / 1000 * (2 * 3.14 * (width1 / 1000) / 2) / 4 * quantity
     elif duct_type == 'ELB':
-        area = 2 * (width1 + height1)/1000 * ((height1 / 2 / 1000) + (length_or_radius/1000) * (3.14 * (degree_or_offset / 180))) * quantity * 1.5
+        area = 2 * (width1 + height1) / 1000 * ((height1 / 2 / 1000) + (length_or_radius / 1000) * (3.14 * (degree_or_offset / 180))) * quantity * 1.5
     else:
         area = 0
 
     cleat = quantity * (4 if gauge == '24g' else 8 if gauge == '22g' else 10 if gauge == '20g' else 12)
     nuts_bolts = quantity * 4
-    gasket = (width1 + height1 + width2 + height2)/1000 * quantity
+    gasket = (width1 + height1 + width2 + height2) / 1000 * quantity
     corner_pieces = 0 if duct_type == 'DUM' else quantity * 8
 
     conn = sqlite3.connect('data.db')
@@ -178,5 +211,49 @@ def submit_all():
     flash('All duct entries submitted successfully!')
     return redirect(url_for('home'))
 
+@app.route('/export_excel')
+def export_excel():
+    conn = sqlite3.connect('data.db')
+    df = pd.read_sql_query("SELECT * FROM duct_entries", conn)
+    conn.close()
+
+    output = BytesIO()
+    writer = pd.ExcelWriter(output, engine='openpyxl')
+    df.to_excel(writer, index=False, sheet_name='Duct Entries')
+    writer.save()
+    output.seek(0)
+
+    return send_file(output, as_attachment=True, download_name='duct_entries.xlsx', mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+
+@app.route('/export_pdf')
+def export_pdf():
+    conn = sqlite3.connect('data.db')
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM duct_entries")
+    data = cursor.fetchall()
+    conn.close()
+
+    output = BytesIO()
+    pdf = canvas.Canvas(output, pagesize=letter)
+    width, height = letter
+    y = height - 40
+    pdf.setFont("Helvetica", 10)
+    pdf.drawString(30, y, "Duct Entries Report")
+    y -= 20
+
+    headers = ["ID", "Duct No", "Type", "W1", "H1", "W2", "H2", "L/R", "Qty", "Deg/Off", "Gauge"]
+    for row in data:
+        row_data = ", ".join(str(row[i]) for i in range(11))
+        if y < 40:
+            pdf.showPage()
+            y = height - 40
+        pdf.drawString(30, y, row_data)
+        y -= 15
+
+    pdf.save()
+    output.seek(0)
+    return send_file(output, as_attachment=True, download_name='duct_entries.pdf', mimetype='application/pdf')
+
 if __name__ == '__main__':
     app.run(debug=True)
+
