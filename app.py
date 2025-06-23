@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, send_file, jsonify
+from flask import Flask, render_template, request, redirect, url_for, flash, send_file
 import sqlite3
 from datetime import datetime
 import pandas as pd
@@ -47,13 +47,6 @@ def init_db():
             timestamp DATETIME
         )
     ''')
-    c.execute('''
-        CREATE TABLE IF NOT EXISTS deleted_entries (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            data TEXT,
-            deleted_at DATETIME
-        )
-    ''')
     conn.commit()
     conn.close()
 
@@ -80,10 +73,11 @@ def save_project():
         form['project_name'], form['enquiry_no'], form['office_no'],
         form['site_engineer'], form['site_contact'], form['location'], datetime.now()
     ))
+    project_id = c.lastrowid  # FIX: Get the inserted project ID
     conn.commit()
     conn.close()
     flash('Project saved successfully!')
-    return redirect(url_for('index'))
+    return redirect(url_for('home', project_id=project_id))  # FIX: Redirect to duct entry page
 
 @app.route('/home/<int:project_id>')
 def home(project_id):
@@ -95,7 +89,7 @@ def home(project_id):
     entries = cursor.fetchall()
     conn.close()
 
-    def total(column): return sum(e[column] for e in entries)
+    def total(col): return sum(e[col] for e in entries)
     def area_by_gauge(g): return sum(e[13] for e in entries if e[12] == g)
 
     return render_template('duct_entry.html',
@@ -130,7 +124,8 @@ def add_duct():
     quantity = int(form['quantity'])
     degree_or_offset = float(form['degree_or_offset'] or 0)
 
-    gauge = '24g' if max(width1, height1) <= 375 else '22g' if max(width1, height1) <= 600 else '20g' if max(width1, height1) <= 900 else '18g'
+    max_side = max(width1, height1)
+    gauge = '24g' if max_side <= 375 else '22g' if max_side <= 600 else '20g' if max_side <= 900 else '18g'
 
     if duct_type == 'ST':
         area = 2 * (width1 + height1) / 1000 * (length_or_radius / 1000) * quantity
@@ -181,3 +176,72 @@ def add_duct():
     conn.commit()
     conn.close()
     return redirect(url_for('home', project_id=project_id))
+
+@app.route('/edit/<int:id>')
+def edit_duct(id):
+    conn = sqlite3.connect('data.db')
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM duct_entries WHERE id=?", (id,))
+    entry = cursor.fetchone()
+    project_id = entry[1]
+    cursor.execute("SELECT * FROM projects WHERE id=?", (project_id,))
+    project = cursor.fetchone()
+    cursor.execute("SELECT * FROM duct_entries WHERE project_id=? ORDER BY id DESC", (project_id,))
+    entries = cursor.fetchall()
+    conn.close()
+    return render_template('duct_entry.html', edit_entry=entry, project=project, entries=entries, project_id=project_id)
+
+@app.route('/delete/<int:id>')
+def delete_duct(id):
+    conn = sqlite3.connect('data.db')
+    cursor = conn.cursor()
+    cursor.execute("SELECT project_id FROM duct_entries WHERE id=?", (id,))
+    project_id = cursor.fetchone()[0]
+    cursor.execute("DELETE FROM duct_entries WHERE id=?", (id,))
+    conn.commit()
+    conn.close()
+    flash("Duct entry deleted!")
+    return redirect(url_for('home', project_id=project_id))
+
+@app.route('/export_excel/<int:project_id>')
+def export_excel(project_id):
+    conn = sqlite3.connect('data.db')
+    df = pd.read_sql_query("SELECT * FROM duct_entries WHERE project_id=?", conn, params=(project_id,))
+    conn.close()
+    output = BytesIO()
+    writer = pd.ExcelWriter(output, engine='openpyxl')
+    df.to_excel(writer, index=False, sheet_name='Duct Entries')
+    writer.close()
+    output.seek(0)
+    return send_file(output, as_attachment=True, download_name='duct_entries.xlsx')
+
+@app.route('/export_pdf/<int:project_id>')
+def export_pdf(project_id):
+    conn = sqlite3.connect('data.db')
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM duct_entries WHERE project_id=?", (project_id,))
+    data = cursor.fetchall()
+    conn.close()
+
+    output = BytesIO()
+    pdf = canvas.Canvas(output, pagesize=letter)
+    width, height = letter
+    y = height - 40
+    pdf.setFont("Helvetica", 10)
+    pdf.drawString(30, y, "Duct Entries Report")
+    y -= 20
+
+    for row in data:
+        text = ", ".join(str(x) for x in row[1:12])
+        if y < 40:
+            pdf.showPage()
+            y = height - 40
+        pdf.drawString(30, y, text)
+        y -= 15
+
+    pdf.save()
+    output.seek(0)
+    return send_file(output, as_attachment=True, download_name='duct_entries.pdf')
+
+if __name__ == '__main__':
+    app.run(debug=True)
