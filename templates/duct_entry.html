@@ -35,6 +35,22 @@
         row.style.display = row.innerText.toLowerCase().includes(input) ? "" : "none";
       });
     }
+
+    function toggleFactorField() {
+      const type = document.getElementById("duct_type").value;
+      const factorField = document.getElementById("factor-group");
+      const factorInput = document.getElementById("factor");
+      if (['RED', 'OFFSET', 'SHOE', 'ELB'].includes(type)) {
+        factorField.style.display = 'block';
+        factorInput.required = true;
+      } else {
+        factorField.style.display = 'none';
+        factorInput.required = false;
+        factorInput.value = '';
+      }
+    }
+
+    window.onload = toggleFactorField;
   </script>
 </head>
 <body>
@@ -71,19 +87,20 @@
           {{ edit_entry and "Edit" or "Add" }} Duct Entry
         </div>
         <div class="card-body">
-          <form method="POST" action="/add_duct">
+          <form method="POST" action="/add_duct" id="ductForm">
             <input type="hidden" name="id" value="{{ edit_entry[0] if edit_entry else '' }}">
             <div class="mb-2">
               <input class="form-control" type="text" name="duct_no" placeholder="Duct No" required value="{{ edit_entry[1] if edit_entry else '' }}">
             </div>
             <div class="mb-2">
-              <select class="form-select" name="duct_type" required>
+              <select class="form-select" name="duct_type" id="duct_type" required onchange="toggleFactorField()">
                 <option value="">Select Type</option>
                 {% for t in ['ST','SHOE','RED','OFFSET','DUM','ELB','VANES'] %}
                   <option value="{{ t }}" {% if edit_entry and edit_entry[2] == t %}selected{% endif %}>{{ t }}</option>
                 {% endfor %}
               </select>
             </div>
+
             {% for i in [3,4,5,6,7,8,9] %}
               <div class="mb-2">
                 <input class="form-control" type="number" step="any" name="{{ ['width1','height1','width2','height2','length_or_radius','quantity','degree_or_offset'][loop.index0] }}"
@@ -91,6 +108,12 @@
                 value="{{ edit_entry[i] if edit_entry else '' }}">
               </div>
             {% endfor %}
+
+            <div class="mb-2" id="factor-group" style="display:none;">
+              <input class="form-control" type="number" step="0.1" min="1" name="factor" id="factor"
+              placeholder="Factor (e.g. 1.5)" value="{{ edit_entry[16] if edit_entry and edit_entry|length > 16 else '' }}">
+            </div>
+
             <button type="submit" class="btn btn-success w-100">
               <i class="fa fa-check"></i> {{ edit_entry and "Update" or "Add" }}
             </button>
