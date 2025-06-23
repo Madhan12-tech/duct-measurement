@@ -48,34 +48,30 @@ init_db()
 
 @app.route('/')
 def index():
-    return redirect(url_for('home'))
+    return render_template('home.html')
 
 @app.route('/home')
 def home():
     conn = sqlite3.connect('data.db')
     cursor = conn.cursor()
-
     cursor.execute("SELECT * FROM projects ORDER BY id DESC LIMIT 1")
     project = cursor.fetchone()
-
     cursor.execute("SELECT * FROM duct_entries ORDER BY id DESC")
     entries = cursor.fetchall()
 
-    # Totals
-    total_qty = sum(entry[8] for entry in entries)
-    total_area = sum(entry[11] for entry in entries)
-    total_bolts = sum(entry[12] for entry in entries)
-    total_cleat = sum(entry[13] for entry in entries)
-    total_gasket = sum(entry[14] for entry in entries)
-    total_corner = sum(entry[15] for entry in entries)
-    area_24g = sum(entry[11] for entry in entries if entry[10] == '24g')
-    area_22g = sum(entry[11] for entry in entries if entry[10] == '22g')
-    area_20g = sum(entry[11] for entry in entries if entry[10] == '20g')
-    area_18g = sum(entry[11] for entry in entries if entry[10] == '18g')
+    total_qty = sum(e[8] for e in entries)
+    total_area = sum(e[11] for e in entries)
+    total_bolts = sum(e[12] for e in entries)
+    total_cleat = sum(e[13] for e in entries)
+    total_gasket = sum(e[14] for e in entries)
+    total_corner = sum(e[15] for e in entries)
+    area_24g = sum(e[11] for e in entries if e[10] == '24g')
+    area_22g = sum(e[11] for e in entries if e[10] == '22g')
+    area_20g = sum(e[11] for e in entries if e[10] == '20g')
+    area_18g = sum(e[11] for e in entries if e[10] == '18g')
 
     conn.close()
-    return render_template(
-        'duct_entry.html',
+    return render_template('duct_entry.html',
         project=project,
         entries=entries,
         total_qty=total_qty,
@@ -105,40 +101,28 @@ def add_duct():
     degree_or_offset = float(form['degree_or_offset'] or 0)
 
     size_sum = width1 + height1
-    if size_sum <= 750:
-        gauge = '24g'
-    elif size_sum <= 1200:
-        gauge = '22g'
-    elif size_sum <= 1800:
-        gauge = '20g'
-    else:
-        gauge = '18g'
+    gauge = '24g' if size_sum <= 750 else '22g' if size_sum <= 1200 else '20g' if size_sum <= 1800 else '18g'
 
     if duct_type == 'ST':
-        area = 2 * (width1 / 1000 + height1 / 1000) * (length_or_radius / 1000) * quantity
+        area = 2 * (width1/1000 + height1/1000) * (length_or_radius/1000) * quantity
     elif duct_type == 'RED':
-        area = (width1 / 1000 + height1 / 1000 + width2 / 1000 + height2 / 1000) * (length_or_radius / 1000) * quantity * 1.5
+        area = (width1 + height1 + width2 + height2)/1000 * (length_or_radius/1000) * quantity * 1.5
     elif duct_type == 'DUM':
-        area = (width1 / 1000 * height1 / 1000) * quantity
+        area = (width1 * height1) / 1_000_000 * quantity
     elif duct_type == 'OFFSET':
-        area = (width1 / 1000 + height1 / 1000 + width2 / 1000 + height2 / 1000) * ((length_or_radius + degree_or_offset) / 1000) * quantity * 1.5
+        area = (width1 + height1 + width2 + height2)/1000 * ((length_or_radius + degree_or_offset)/1000) * quantity * 1.5
     elif duct_type == 'SHOE':
-        area = (width1 / 1000 + height1 / 1000) * 2 * (length_or_radius / 1000) * quantity * 1.5
+        area = (width1 + height1) * 2 / 1000 * (length_or_radius/1000) * quantity * 1.5
     elif duct_type == 'VANES':
-        area = (width1 / 1000) * (2 * 3.14 * (width1 / 1000) / 2) / 4 * quantity
+        area = width1 / 1000 * (2 * 3.14 * (width1 / 1000) / 2) / 4 * quantity
     elif duct_type == 'ELB':
-        area = 2 * (width1 / 1000 + height1 / 1000) * ((height1 / 1000) / 2 + (length_or_radius / 1000) * (3.14 * (degree_or_offset / 180))) * quantity * 1.5
+        area = 2 * (width1 + height1)/1000 * ((height1 / 2 / 1000) + (length_or_radius/1000) * (3.14 * (degree_or_offset / 180))) * quantity * 1.5
     else:
         area = 0
 
-    if gauge == '24g': cleat = quantity * 4
-    elif gauge == '22g': cleat = quantity * 8
-    elif gauge == '20g': cleat = quantity * 10
-    elif gauge == '18g': cleat = quantity * 12
-    else: cleat = 0
-
+    cleat = quantity * (4 if gauge == '24g' else 8 if gauge == '22g' else 10 if gauge == '20g' else 12)
     nuts_bolts = quantity * 4
-    gasket = (width1 + height1 + width2 + height2) / 1000 * quantity
+    gasket = (width1 + height1 + width2 + height2)/1000 * quantity
     corner_pieces = 0 if duct_type == 'DUM' else quantity * 8
 
     conn = sqlite3.connect('data.db')
