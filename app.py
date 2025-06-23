@@ -5,15 +5,15 @@ import pandas as pd
 from io import BytesIO
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import letter
+import logging
 
 app = Flask(__name__)
 app.secret_key = 'secretkey'
+logging.basicConfig(level=logging.DEBUG)
 
 def init_db():
     conn = sqlite3.connect('data.db')
     c = conn.cursor()
-
-    # Create projects table
     c.execute('''
         CREATE TABLE IF NOT EXISTS projects (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -26,8 +26,6 @@ def init_db():
             timestamp DATETIME
         )
     ''')
-
-    # Create duct_entries table
     c.execute('''
         CREATE TABLE IF NOT EXISTS duct_entries (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -51,8 +49,7 @@ def init_db():
             timestamp DATETIME
         )
     ''')
-
-    # Safely add missing columns
+    # Safe add new columns
     try:
         c.execute("ALTER TABLE duct_entries ADD COLUMN factor REAL DEFAULT 1.0")
     except sqlite3.OperationalError:
@@ -61,7 +58,6 @@ def init_db():
         c.execute("ALTER TABLE duct_entries ADD COLUMN timestamp DATETIME")
     except sqlite3.OperationalError:
         pass
-
     conn.commit()
     conn.close()
 
@@ -130,13 +126,13 @@ def add_duct():
     duct_type = form['duct_type']
     factor = float(form.get('factor', 1.0)) if duct_type in ['RED', 'OFFSET', 'SHOE', 'ELB'] else 1.0
 
-    width1 = float(form['width1'])
-    height1 = float(form['height1'])
-    width2 = float(form['width2'] or 0)
-    height2 = float(form['height2'] or 0)
-    length_or_radius = float(form['length_or_radius'])
-    quantity = int(form['quantity'])
-    degree_or_offset = float(form['degree_or_offset'] or 0)
+    width1 = float(form.get('width1', 0))
+    height1 = float(form.get('height1', 0))
+    width2 = float(form.get('width2') or 0)
+    height2 = float(form.get('height2') or 0)
+    length_or_radius = float(form.get('length_or_radius', 0))
+    quantity = int(form.get('quantity', 1))
+    degree_or_offset = float(form.get('degree_or_offset') or 0)
 
     max_size = max(width1, height1)
     if max_size <= 375:
@@ -220,7 +216,11 @@ def delete_duct(id):
     conn = sqlite3.connect('data.db')
     cursor = conn.cursor()
     cursor.execute("SELECT project_id FROM duct_entries WHERE id=?", (id,))
-    project_id = cursor.fetchone()[0]
+    result = cursor.fetchone()
+    if not result:
+        flash("Entry not found!")
+        return redirect(url_for('index'))
+    project_id = result[0]
     cursor.execute("DELETE FROM duct_entries WHERE id=?", (id,))
     conn.commit()
     conn.close()
