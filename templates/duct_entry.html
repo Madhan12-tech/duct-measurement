@@ -3,13 +3,33 @@
 <head>
   <title>Duct Entry</title>
   <style>
-    body { font-family: Arial, sans-serif; padding: 20px; }
-    .container { display: flex; gap: 20px; }
-    form { flex: 1; }
-    table { flex: 2; width: 100%; border-collapse: collapse; }
-    th, td { border: 1px solid #999; padding: 8px; text-align: center; }
-    th { background-color: #f2f2f2; }
-    .actions { margin-top: 10px; }
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+    }
+    .container {
+      display: flex;
+      gap: 20px;
+    }
+    form {
+      flex: 1;
+    }
+    table {
+      flex: 2;
+      width: 100%;
+      border-collapse: collapse;
+    }
+    th, td {
+      border: 1px solid #999;
+      padding: 6px;
+      text-align: center;
+    }
+    th {
+      background-color: #f2f2f2;
+    }
+    .actions {
+      margin-top: 10px;
+    }
   </style>
 </head>
 <body>
@@ -34,31 +54,33 @@
 
   <div class="container">
 
-    <!-- Left Form -->
+    <!-- Left: Duct Entry Form -->
     <form action="/add_duct" method="POST">
-      <h3>Duct Entry</h3>
-      <input type="text" name="duct_no" placeholder="Duct No" required><br><br>
+      <h3>{% if edit_entry %}Edit{% else %}Add{% endif %} Duct Entry</h3>
+      {% if edit_entry %}
+        <input type="hidden" name="id" value="{{ edit_entry[0] }}">
+      {% endif %}
+      <input type="text" name="duct_no" placeholder="Duct No" required value="{{ edit_entry[1] if edit_entry else '' }}"><br><br>
+
       <select name="duct_type" required>
         <option value="">Select Type</option>
-        <option value="ST">ST</option>
-        <option value="SHOE">SHOE</option>
-        <option value="RED">RED</option>
-        <option value="OFFSET">OFFSET</option>
-        <option value="DUM">DUM</option>
-        <option value="ELB">ELB</option>
-        <option value="VANES">VANES</option>
+        {% for t in ['ST', 'SHOE', 'RED', 'OFFSET', 'DUM', 'ELB', 'VANES'] %}
+          <option value="{{ t }}" {% if edit_entry and edit_entry[2] == t %}selected{% endif %}>{{ t }}</option>
+        {% endfor %}
       </select><br><br>
-      <input type="number" step="any" name="width1" placeholder="Width1 (mm)" required><br><br>
-      <input type="number" step="any" name="height1" placeholder="Height1 (mm)" required><br><br>
-      <input type="number" step="any" name="width2" placeholder="Width2 (mm)"><br><br>
-      <input type="number" step="any" name="height2" placeholder="Height2 (mm)"><br><br>
-      <input type="number" step="any" name="length_or_radius" placeholder="Length/Radius (mm)" required><br><br>
-      <input type="number" name="quantity" placeholder="Quantity" required><br><br>
-      <input type="number" step="any" name="degree_or_offset" placeholder="Degree/Offset (mm)"><br><br>
-      <button type="submit">Add</button>
+
+      <input type="number" step="any" name="width1" placeholder="Width1 (mm)" required value="{{ edit_entry[3] if edit_entry else '' }}"><br><br>
+      <input type="number" step="any" name="height1" placeholder="Height1 (mm)" required value="{{ edit_entry[4] if edit_entry else '' }}"><br><br>
+      <input type="number" step="any" name="width2" placeholder="Width2 (mm)" value="{{ edit_entry[5] if edit_entry else '' }}"><br><br>
+      <input type="number" step="any" name="height2" placeholder="Height2 (mm)" value="{{ edit_entry[6] if edit_entry else '' }}"><br><br>
+      <input type="number" step="any" name="length_or_radius" placeholder="Length/Radius (mm)" required value="{{ edit_entry[7] if edit_entry else '' }}"><br><br>
+      <input type="number" name="quantity" placeholder="Quantity" required value="{{ edit_entry[8] if edit_entry else '' }}"><br><br>
+      <input type="number" step="any" name="degree_or_offset" placeholder="Degree/Offset (mm)" value="{{ edit_entry[9] if edit_entry else '' }}"><br><br>
+
+      <button type="submit">{% if edit_entry %}Update{% else %}Add{% endif %}</button>
     </form>
 
-    <!-- Right Table -->
+    <!-- Right: Table of Duct Entries -->
     <div>
       <h3>Live Entries</h3>
       <div class="actions">
@@ -83,19 +105,19 @@
             <th>H1</th>
             <th>W2</th>
             <th>H2</th>
-            <th>L/R</th>
+            <th>Length/Radius</th>
             <th>Qty</th>
-            <th>D/O</th>
+            <th>Deg/Off</th>
             <th>Gauge</th>
             <th>24g</th>
             <th>22g</th>
             <th>20g</th>
             <th>18g</th>
-            <th>Area (m²)</th>
-            <th>Nuts & Bolts</th>
+            <th>Area</th>
+            <th>Nuts</th>
             <th>Cleat</th>
-            <th>Gasket (m)</th>
-            <th>Corner Pieces</th>
+            <th>Gasket</th>
+            <th>Corner</th>
             <th>Actions</th>
           </tr>
         </thead>
@@ -113,10 +135,10 @@
             <td>{{ entry[8] }}</td>
             <td>{{ entry[9] }}</td>
             <td>{{ entry[10] }}</td>
-            <td>{{ entry[16] }}</td>
-            <td>{{ entry[17] }}</td>
-            <td>{{ entry[18] }}</td>
-            <td>{{ entry[19] }}</td>
+            <td>{% if entry[10] == '24g' %}✓{% endif %}</td>
+            <td>{% if entry[10] == '22g' %}✓{% endif %}</td>
+            <td>{% if entry[10] == '20g' %}✓{% endif %}</td>
+            <td>{% if entry[10] == '18g' %}✓{% endif %}</td>
             <td>{{ "%.2f"|format(entry[11]) }}</td>
             <td>{{ entry[12] }}</td>
             <td>{{ entry[13] }}</td>
@@ -124,14 +146,13 @@
             <td>{{ entry[15] }}</td>
             <td>
               <a href="/edit/{{ entry[0] }}">Edit</a> |
-              <a href="/delete/{{ entry[0] }}" onclick="return confirm('Are you sure?')">Delete</a>
+              <a href="/delete/{{ entry[0] }}" onclick="return confirm('Delete this entry?')">Delete</a>
             </td>
           </tr>
           {% endfor %}
         </tbody>
       </table>
     </div>
-
   </div>
 
 </body>
