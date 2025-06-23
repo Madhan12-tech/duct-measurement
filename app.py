@@ -61,6 +61,28 @@ def home():
     conn.close()
     return render_template('duct_entry.html', project=project, entries=entries)
 
+@app.route('/save_project', methods=['POST'])
+def save_project():
+    data = (
+        request.form['project_name'],
+        request.form['enquiry_no'],
+        request.form['office_no'],
+        request.form['site_engineer'],
+        request.form['site_contact'],
+        request.form['location'],
+        datetime.now()
+    )
+    conn = sqlite3.connect('data.db')
+    cursor = conn.cursor()
+    cursor.execute('''
+        INSERT INTO projects (project_name, enquiry_no, office_no, site_engineer, site_contact, location, timestamp)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+    ''', data)
+    conn.commit()
+    conn.close()
+    flash('Project saved successfully!')
+    return redirect(url_for('home'))
+
 @app.route('/add_duct', methods=['POST'])
 def add_duct():
     form = request.form
