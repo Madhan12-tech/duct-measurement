@@ -30,7 +30,7 @@ def init_db():
             cleat INTEGER,
             gasket REAL,
             corner_pieces INTEGER,
-            project_id INTEGER,
+            factor REAL,
             timestamp DATETIME
         )
     ''')
@@ -53,12 +53,7 @@ init_db()
 
 @app.route('/')
 def index():
-    conn = sqlite3.connect('data.db')
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM projects ORDER BY id DESC")
-    projects = cursor.fetchall()
-    conn.close()
-    return render_template('home.html', projects=projects)
+    return render_template('home.html')
 
 @app.route('/save_project', methods=['POST'])
 def save_project():
@@ -78,24 +73,17 @@ def save_project():
         datetime.now()
     ))
     conn.commit()
-    project_id = c.lastrowid
     conn.close()
     flash('Project saved successfully!')
-    return redirect(url_for('home', project_id=project_id))
+    return redirect(url_for('home'))
 
 @app.route('/home')
 def home():
-    project_id = request.args.get('project_id')
-    if not project_id:
-        flash("No project selected.")
-        return redirect(url_for('index'))
-
     conn = sqlite3.connect('data.db')
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM projects WHERE id=?", (project_id,))
+    cursor.execute("SELECT * FROM projects ORDER BY id DESC LIMIT 1")
     project = cursor.fetchone()
-
-    cursor.execute("SELECT * FROM duct_entries WHERE project_id=? ORDER BY id DESC", (project_id,))
+    cursor.execute("SELECT * FROM duct_entries ORDER BY id DESC")
     entries = cursor.fetchall()
 
     total_qty = sum(e[8] for e in entries)
@@ -129,7 +117,6 @@ def home():
 def add_duct():
     form = request.form
     id_ = form.get('id')
-    project_id = request.args.get('project_id') or request.form.get('project_id')
     duct_no = form['duct_no']
     duct_type = form['duct_type']
     width1 = float(form['width1'])
@@ -139,24 +126,32 @@ def add_duct():
     length_or_radius = float(form['length_or_radius'])
     quantity = int(form['quantity'])
     degree_or_offset = float(form['degree_or_offset'] or 0)
+    factor = float(form['factor']) if form.get('factor') else 1.0
 
     size_sum = width1 + height1
-    gauge = '24g' if size_sum <= 750 else '22g' if size_sum <= 1200 else '20g' if size_sum <= 1800 else '18g'
+    if size_sum <= 750:
+        gauge = '24g'
+    elif size_sum <= 1200:
+        gauge = '22g'
+    elif size_sum <= 1800:
+        gauge = '20g'
+    else:
+        gauge = '18g'
 
     if duct_type == 'ST':
         area = 2 * (width1 + height1) / 1000 * (length_or_radius / 1000) * quantity
     elif duct_type == 'RED':
-        area = (width1 + height1 + width2 + height2) / 1000 * (length_or_radius / 1000) * quantity * 1.5
+        area = (width1 + height1 + width2 + height2) / 1000 * (length_or_radius / 1000) * quantity * factor
     elif duct_type == 'DUM':
         area = (width1 * height1) / 1_000_000 * quantity
     elif duct_type == 'OFFSET':
-        area = (width1 + height1 + width2 + height2) / 1000 * ((length_or_radius + degree_or_offset) / 1000) * quantity * 1.5
+        area = (width1 + height1 + width2 + height2) / 1000 * ((length_or_radius + degree_or_offset) / 1000) * quantity * factor
     elif duct_type == 'SHOE':
-        area = (width1 + height1) * 2 / 1000 * (length_or_radius / 1000) * quantity * 1.5
+        area = (width1 + height1) * 2 / 1000 * (length_or_radius / 1000) * quantity * factor
     elif duct_type == 'VANES':
         area = width1 / 1000 * (2 * 3.14 * (width1 / 1000) / 2) / 4 * quantity
     elif duct_type == 'ELB':
-        area = 2 * (width1 + height1) / 1000 * ((height1 / 2 / 1000) + (length_or_radius / 1000) * (3.14 * (degree_or_offset / 180))) * quantity * 1.5
+        area = 2 * (width1 + height1) / 1000 * ((height1 / 2 / 1000) + (length_or_radius / 1000) * (3.14 * (degree_or_offset / 180))) * quantity * factor
     else:
         area = 0
 
@@ -172,23 +167,23 @@ def add_duct():
         cursor.execute('''
             UPDATE duct_entries SET duct_no=?, duct_type=?, width1=?, height1=?, width2=?, height2=?,
             length_or_radius=?, quantity=?, degree_or_offset=?, gauge=?, area=?, nuts_bolts=?, cleat=?,
-            gasket=?, corner_pieces=?, project_id=?, timestamp=? WHERE id=?
+            gasket=?, corner_pieces=?, factor=?, timestamp=? WHERE id=?
         ''', (duct_no, duct_type, width1, height1, width2, height2, length_or_radius, quantity, degree_or_offset,
-              gauge, area, nuts_bolts, cleat, gasket, corner_pieces, project_id, datetime.now(), id_))
+              gauge, area, nuts_bolts, cleat, gasket, corner_pieces, factor, datetime.now(), id_))
         flash('Duct entry updated!')
     else:
         cursor.execute('''
             INSERT INTO duct_entries (
                 duct_no, duct_type, width1, height1, width2, height2, length_or_radius, quantity,
-                degree_or_offset, gauge, area, nuts_bolts, cleat, gasket, corner_pieces, project_id, timestamp
+                degree_or_offset, gauge, area, nuts_bolts, cleat, gasket, corner_pieces, factor, timestamp
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ''', (duct_no, duct_type, width1, height1, width2, height2, length_or_radius, quantity, degree_or_offset,
-              gauge, area, nuts_bolts, cleat, gasket, corner_pieces, project_id, datetime.now()))
+              gauge, area, nuts_bolts, cleat, gasket, corner_pieces, factor, datetime.now()))
         flash('Duct entry added!')
 
     conn.commit()
     conn.close()
-    return redirect(url_for('home', project_id=project_id))
+    return redirect(url_for('home'))
 
 @app.route('/edit/<int:id>')
 def edit_duct(id):
@@ -196,9 +191,9 @@ def edit_duct(id):
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM duct_entries WHERE id=?", (id,))
     entry = cursor.fetchone()
-    cursor.execute("SELECT * FROM projects WHERE id=?", (entry[16],))
+    cursor.execute("SELECT * FROM projects ORDER BY id DESC LIMIT 1")
     project = cursor.fetchone()
-    cursor.execute("SELECT * FROM duct_entries WHERE project_id=? ORDER BY id DESC", (entry[16],))
+    cursor.execute("SELECT * FROM duct_entries ORDER BY id DESC")
     entries = cursor.fetchall()
     conn.close()
     return render_template('duct_entry.html', edit_entry=entry, project=project, entries=entries)
@@ -207,22 +202,59 @@ def edit_duct(id):
 def delete_duct(id):
     conn = sqlite3.connect('data.db')
     cursor = conn.cursor()
-    cursor.execute("SELECT project_id FROM duct_entries WHERE id=?", (id,))
-    project_id = cursor.fetchone()[0]
     cursor.execute("DELETE FROM duct_entries WHERE id=?", (id,))
     conn.commit()
     conn.close()
     flash('Duct entry deleted!')
-    return redirect(url_for('home', project_id=project_id))
+    return redirect(url_for('home'))
 
 @app.route('/submit_all', methods=['POST'])
 def submit_all():
-    project_id = request.args.get('project_id')
     flash('All duct entries submitted successfully!')
-    return redirect(url_for('home', project_id=project_id))
+    return redirect(url_for('home'))
 
-# Export Excel and PDF routes here if needed...
+@app.route('/export_excel')
+def export_excel():
+    conn = sqlite3.connect('data.db')
+    df = pd.read_sql_query("SELECT * FROM duct_entries", conn)
+    conn.close()
+
+    output = BytesIO()
+    writer = pd.ExcelWriter(output, engine='openpyxl')
+    df.to_excel(writer, index=False, sheet_name='Duct Entries')
+    writer.close()
+    output.seek(0)
+
+    return send_file(output, as_attachment=True, download_name='duct_entries.xlsx', mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+
+@app.route('/export_pdf')
+def export_pdf():
+    conn = sqlite3.connect('data.db')
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM duct_entries")
+    data = cursor.fetchall()
+    conn.close()
+
+    output = BytesIO()
+    pdf = canvas.Canvas(output, pagesize=letter)
+    width, height = letter
+    y = height - 40
+    pdf.setFont("Helvetica", 10)
+    pdf.drawString(30, y, "Duct Entries Report")
+    y -= 20
+
+    headers = ["ID", "Duct No", "Type", "W1", "H1", "W2", "H2", "L/R", "Qty", "Deg/Off", "Gauge"]
+    for row in data:
+        row_data = ", ".join(str(row[i]) for i in range(11))
+        if y < 40:
+            pdf.showPage()
+            y = height - 40
+        pdf.drawString(30, y, row_data)
+        y -= 15
+
+    pdf.save()
+    output.seek(0)
+    return send_file(output, as_attachment=True, download_name='duct_entries.pdf', mimetype='application/pdf')
 
 if __name__ == '__main__':
     app.run(debug=True)
-
