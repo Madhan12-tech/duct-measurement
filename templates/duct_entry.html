@@ -3,75 +3,30 @@
 <head>
   <meta charset="UTF-8">
   <title>Duct Entry</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  
+  <!-- Bootstrap + FontAwesome -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+  
   <style>
     body {
-      font-family: Arial, sans-serif;
-      padding: 10px;
-      background: #f7f9fb;
+      background: #f4f6f9;
+      padding: 20px;
     }
-
-    .container {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 20px;
+    .card {
+      margin-bottom: 20px;
     }
-
-    form, .table-container {
-      flex: 1 1 100%;
-      background: #fff;
-      padding: 15px;
-      border-radius: 8px;
-      box-shadow: 0 0 5px #ccc;
-    }
-
-    input, select {
-      width: 100%;
-      padding: 8px;
-      margin-bottom: 10px;
-    }
-
-    .actions, .search-bar {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      margin-bottom: 10px;
-    }
-
-    .actions button, .search-bar input {
-      padding: 6px 10px;
-      flex: 1;
-    }
-
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 10px;
-    }
-
-    th, td {
-      border: 1px solid #ddd;
-      padding: 6px;
-      text-align: center;
-    }
-
     th {
-      background-color: #004a99;
+      background-color: #0d6efd;
       color: white;
     }
-
     tfoot td {
-      background-color: #eef;
+      background-color: #e7f1ff;
       font-weight: bold;
     }
-
-    @media (min-width: 768px) {
-      form, .table-container {
-        flex: 1;
-      }
-    }
   </style>
+
   <script>
     function filterTable() {
       const input = document.getElementById("searchInput").value.toLowerCase();
@@ -84,145 +39,145 @@
 </head>
 <body>
 
+<div class="container">
+
   {% with messages = get_flashed_messages() %}
     {% if messages %}
-      <ul style="color: green;">
+      <div class="alert alert-success">
         {% for message in messages %}
-          <li>{{ message }}</li>
+          <div>{{ message }}</div>
         {% endfor %}
-      </ul>
+      </div>
     {% endif %}
   {% endwith %}
 
-  <h2>Project Info</h2>
-  {% if project %}
-    <p><strong>{{ project[1] }}</strong> | Enquiry: {{ project[2] }} | Office: {{ project[3] }} |
-      Engineer: {{ project[4] }} | Contact: {{ project[5] }} | Location: {{ project[6] }}</p>
-  {% else %}
-    <p>No project information available.</p>
-  {% endif %}
+  <div class="card">
+    <div class="card-body">
+      <h4 class="card-title">Project Info</h4>
+      {% if project %}
+        <p><strong>{{ project[1] }}</strong> | Enquiry: {{ project[2] }} | Office: {{ project[3] }} |
+        Engineer: {{ project[4] }} | Contact: {{ project[5] }} | Location: {{ project[6] }}</p>
+      {% else %}
+        <p>No project information available.</p>
+      {% endif %}
+    </div>
+  </div>
 
-  <div class="container">
-
-    <!-- Duct Entry Form -->
-    <form action="/add_duct" method="POST">
-      <h3>{{ edit_entry and "Edit" or "Add" }} Duct Entry</h3>
-      <input type="hidden" name="id" value="{{ edit_entry[0] if edit_entry else '' }}">
-      <input type="text" name="duct_no" placeholder="Duct No" value="{{ edit_entry[1] if edit_entry else '' }}" required>
-      <select name="duct_type" required>
-        <option value="">Select Type</option>
-        {% for t in ['ST','SHOE','RED','OFFSET','DUM','ELB','VANES'] %}
-          <option value="{{ t }}" {% if edit_entry and edit_entry[2] == t %}selected{% endif %}>{{ t }}</option>
-        {% endfor %}
-      </select>
-      <input type="number" step="any" name="width1" placeholder="Width1 (mm)" value="{{ edit_entry[3] if edit_entry else '' }}" required>
-      <input type="number" step="any" name="height1" placeholder="Height1 (mm)" value="{{ edit_entry[4] if edit_entry else '' }}" required>
-      <input type="number" step="any" name="width2" placeholder="Width2 (mm)" value="{{ edit_entry[5] if edit_entry else '' }}">
-      <input type="number" step="any" name="height2" placeholder="Height2 (mm)" value="{{ edit_entry[6] if edit_entry else '' }}">
-      <input type="number" step="any" name="length_or_radius" placeholder="Length/Radius (mm)" value="{{ edit_entry[7] if edit_entry else '' }}" required>
-      <input type="number" name="quantity" placeholder="Quantity" value="{{ edit_entry[8] if edit_entry else '' }}" required>
-      <input type="number" step="any" name="degree_or_offset" placeholder="Degree/Offset (mm)" value="{{ edit_entry[9] if edit_entry else '' }}">
-      <button type="submit"><i class="fa fa-check"></i> {{ edit_entry and "Update" or "Add" }}</button>
-    </form>
-
-    <!-- Table Display -->
-    <div class="table-container">
-      <h3>Live Entries</h3>
-
-      <div class="search-bar">
-        <input type="text" id="searchInput" onkeyup="filterTable()" placeholder="Search by any field...">
+  <div class="row">
+    <!-- Form -->
+    <div class="col-md-4">
+      <div class="card">
+        <div class="card-header bg-primary text-white">
+          {{ edit_entry and "Edit" or "Add" }} Duct Entry
+        </div>
+        <div class="card-body">
+          <form method="POST" action="/add_duct">
+            <input type="hidden" name="id" value="{{ edit_entry[0] if edit_entry else '' }}">
+            <div class="mb-2">
+              <input class="form-control" type="text" name="duct_no" placeholder="Duct No" required value="{{ edit_entry[1] if edit_entry else '' }}">
+            </div>
+            <div class="mb-2">
+              <select class="form-select" name="duct_type" required>
+                <option value="">Select Type</option>
+                {% for t in ['ST','SHOE','RED','OFFSET','DUM','ELB','VANES'] %}
+                  <option value="{{ t }}" {% if edit_entry and edit_entry[2] == t %}selected{% endif %}>{{ t }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            {% for i in [3,4,5,6,7,8,9] %}
+              <div class="mb-2">
+                <input class="form-control" type="number" step="any" name="{{ ['width1','height1','width2','height2','length_or_radius','quantity','degree_or_offset'][loop.index0] }}"
+                placeholder="{{ ['Width1','Height1','Width2','Height2','Length/Radius','Quantity','Degree/Offset'][loop.index0] }} (mm)"
+                value="{{ edit_entry[i] if edit_entry else '' }}">
+              </div>
+            {% endfor %}
+            <button type="submit" class="btn btn-success w-100">
+              <i class="fa fa-check"></i> {{ edit_entry and "Update" or "Add" }}
+            </button>
+          </form>
+        </div>
       </div>
-
-      <div class="actions">
-        <form action="/export_excel" method="get">
-          <button type="submit"><i class="fa fa-file-excel"></i> Export Excel</button>
-        </form>
-        <form action="/export_pdf" method="get">
-          <button type="submit"><i class="fa fa-file-pdf"></i> Export PDF</button>
-        </form>
-        <form action="/submit_all" method="post">
-          <button type="submit"><i class="fa fa-paper-plane"></i> Submit All</button>
-        </form>
-        <button onclick="window.print()"><i class="fa fa-print"></i> Print</button>
-      </div>
-
-      <table id="entriesTable">
-        <thead>
-          <tr>
-            <th>#</th>
-            <th>Duct No</th>
-            <th>Type</th>
-            <th>W1</th>
-            <th>H1</th>
-            <th>W2</th>
-            <th>H2</th>
-            <th>L/R</th>
-            <th>Qty</th>
-            <th>Deg/Off</th>
-            <th>Gauge</th>
-            <th>24g</th>
-            <th>22g</th>
-            <th>20g</th>
-            <th>18g</th>
-            <th>Total Area</th>
-            <th>Bolt</th>
-            <th>Cleat</th>
-            <th>Gasket</th>
-            <th>Corner</th>
-            <th>Action</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for entry in entries %}
-          <tr>
-            <td>{{ loop.index }}</td>
-            <td>{{ entry[1] }}</td>
-            <td>{{ entry[2] }}</td>
-            <td>{{ entry[3] }}</td>
-            <td>{{ entry[4] }}</td>
-            <td>{{ entry[5] }}</td>
-            <td>{{ entry[6] }}</td>
-            <td>{{ entry[7] }}</td>
-            <td>{{ entry[8] }}</td>
-            <td>{{ entry[9] }}</td>
-            <td>{{ entry[10] }}</td>
-            <td>{{ "%.2f"|format(entry[11]) if entry[10] == '24g' else '' }}</td>
-            <td>{{ "%.2f"|format(entry[11]) if entry[10] == '22g' else '' }}</td>
-            <td>{{ "%.2f"|format(entry[11]) if entry[10] == '20g' else '' }}</td>
-            <td>{{ "%.2f"|format(entry[11]) if entry[10] == '18g' else '' }}</td>
-            <td>{{ "%.2f"|format(entry[11]) }}</td>
-            <td>{{ entry[12] }}</td>
-            <td>{{ entry[13] }}</td>
-            <td>{{ "%.2f"|format(entry[14]) }}</td>
-            <td>{{ entry[15] }}</td>
-            <td>
-              <a href="/edit/{{ entry[0] }}"><i class="fa fa-edit"></i></a>
-              <a href="/delete/{{ entry[0] }}" onclick="return confirm('Are you sure?')"><i class="fa fa-trash" style="color:red;"></i></a>
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-        <tfoot>
-          <tr>
-            <td colspan="8">Total</td>
-            <td>{{ total_qty }}</td>
-            <td></td>
-            <td></td>
-            <td>{{ "%.2f"|format(area_24g) }}</td>
-            <td>{{ "%.2f"|format(area_22g) }}</td>
-            <td>{{ "%.2f"|format(area_20g) }}</td>
-            <td>{{ "%.2f"|format(area_18g) }}</td>
-            <td>{{ "%.2f"|format(total_area) }}</td>
-            <td>{{ total_bolts }}</td>
-            <td>{{ total_cleat }}</td>
-            <td>{{ "%.2f"|format(total_gasket) }}</td>
-            <td>{{ total_corner }}</td>
-            <td></td>
-          </tr>
-        </tfoot>
-      </table>
     </div>
 
+    <!-- Table -->
+    <div class="col-md-8">
+      <div class="card">
+        <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
+          <span><i class="fa fa-table"></i> Live Entries</span>
+          <input class="form-control form-control-sm w-50" id="searchInput" onkeyup="filterTable()" placeholder="Search...">
+        </div>
+        <div class="card-body p-2">
+          <div class="d-flex gap-2 mb-3 flex-wrap">
+            <form action="/export_excel" method="get"><button class="btn btn-outline-success btn-sm"><i class="fa fa-file-excel"></i> Excel</button></form>
+            <form action="/export_pdf" method="get"><button class="btn btn-outline-danger btn-sm"><i class="fa fa-file-pdf"></i> PDF</button></form>
+            <form action="/submit_all" method="post"><button class="btn btn-outline-primary btn-sm"><i class="fa fa-paper-plane"></i> Submit All</button></form>
+            <button onclick="window.print()" class="btn btn-outline-secondary btn-sm"><i class="fa fa-print"></i> Print</button>
+          </div>
+
+          <div class="table-responsive">
+            <table class="table table-bordered table-sm" id="entriesTable">
+              <thead>
+                <tr>
+                  <th>#</th><th>Duct No</th><th>Type</th><th>W1</th><th>H1</th><th>W2</th><th>H2</th>
+                  <th>L/R</th><th>Qty</th><th>Deg/Off</th><th>Gauge</th>
+                  <th>24g</th><th>22g</th><th>20g</th><th>18g</th>
+                  <th>Area</th><th>Bolt</th><th>Cleat</th><th>Gasket</th><th>Corner</th><th>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for entry in entries %}
+                <tr>
+                  <td>{{ loop.index }}</td>
+                  <td>{{ entry[1] }}</td>
+                  <td>{{ entry[2] }}</td>
+                  <td>{{ entry[3] }}</td>
+                  <td>{{ entry[4] }}</td>
+                  <td>{{ entry[5] }}</td>
+                  <td>{{ entry[6] }}</td>
+                  <td>{{ entry[7] }}</td>
+                  <td>{{ entry[8] }}</td>
+                  <td>{{ entry[9] }}</td>
+                  <td>{{ entry[10] }}</td>
+                  <td>{{ "%.2f"|format(entry[11]) if entry[10] == '24g' else '' }}</td>
+                  <td>{{ "%.2f"|format(entry[11]) if entry[10] == '22g' else '' }}</td>
+                  <td>{{ "%.2f"|format(entry[11]) if entry[10] == '20g' else '' }}</td>
+                  <td>{{ "%.2f"|format(entry[11]) if entry[10] == '18g' else '' }}</td>
+                  <td>{{ "%.2f"|format(entry[11]) }}</td>
+                  <td>{{ entry[12] }}</td>
+                  <td>{{ entry[13] }}</td>
+                  <td>{{ "%.2f"|format(entry[14]) }}</td>
+                  <td>{{ entry[15] }}</td>
+                  <td>
+                    <a href="/edit/{{ entry[0] }}" class="text-primary"><i class="fa fa-edit"></i></a>
+                    <a href="/delete/{{ entry[0] }}" onclick="return confirm('Delete?')" class="text-danger"><i class="fa fa-trash"></i></a>
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+              <tfoot>
+                <tr>
+                  <td colspan="8"><strong>Total</strong></td>
+                  <td>{{ total_qty }}</td><td></td><td></td>
+                  <td>{{ "%.2f"|format(area_24g) }}</td>
+                  <td>{{ "%.2f"|format(area_22g) }}</td>
+                  <td>{{ "%.2f"|format(area_20g) }}</td>
+                  <td>{{ "%.2f"|format(area_18g) }}</td>
+                  <td>{{ "%.2f"|format(total_area) }}</td>
+                  <td>{{ total_bolts }}</td>
+                  <td>{{ total_cleat }}</td>
+                  <td>{{ "%.2f"|format(total_gasket) }}</td>
+                  <td>{{ total_corner }}</td><td></td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
+</div>
+
+<!-- Bootstrap JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
