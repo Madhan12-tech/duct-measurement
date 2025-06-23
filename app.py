@@ -13,6 +13,7 @@ def init_db():
     conn = sqlite3.connect('data.db')
     c = conn.cursor()
 
+    # Create tables
     c.execute('''
         CREATE TABLE IF NOT EXISTS projects (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -25,7 +26,6 @@ def init_db():
             timestamp DATETIME
         )
     ''')
-
     c.execute('''
         CREATE TABLE IF NOT EXISTS duct_entries (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -50,6 +50,7 @@ def init_db():
         )
     ''')
 
+    # Try to add missing columns
     try:
         c.execute("ALTER TABLE duct_entries ADD COLUMN factor REAL DEFAULT 1.0")
     except sqlite3.OperationalError:
@@ -201,12 +202,9 @@ def edit_duct(id):
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM duct_entries WHERE id=?", (id,))
     entry = cursor.fetchone()
-
     if not entry:
-        conn.close()
         flash("Entry not found!")
         return redirect(url_for('index'))
-
     project_id = entry[1]
     cursor.execute("SELECT * FROM projects WHERE id=?", (project_id,))
     project = cursor.fetchone()
@@ -214,19 +212,32 @@ def edit_duct(id):
     entries = cursor.fetchall()
     conn.close()
 
-    return render_template('duct_entry.html', edit_entry=entry, project=project, entries=entries, project_id=project_id)
+    def total(column): return sum(e[column] for e in entries)
+    def area_by_gauge(g): return sum(e[13] for e in entries if e[12] == g)
+
+    return render_template('duct_entry.html',
+        edit_entry=entry,
+        project=project,
+        entries=entries,
+        project_id=project_id,
+        total_qty=total(9),
+        total_area=total(13),
+        total_bolts=total(14),
+        total_cleat=total(15),
+        total_gasket=total(16),
+        total_corner=total(17),
+        area_24g=area_by_gauge('24g'),
+        area_22g=area_by_gauge('22g'),
+        area_20g=area_by_gauge('20g'),
+        area_18g=area_by_gauge('18g')
+    )
 
 @app.route('/delete/<int:id>')
 def delete_duct(id):
     conn = sqlite3.connect('data.db')
     cursor = conn.cursor()
     cursor.execute("SELECT project_id FROM duct_entries WHERE id=?", (id,))
-    result = cursor.fetchone()
-    if not result:
-        conn.close()
-        flash("Entry not found!")
-        return redirect(url_for('index'))
-    project_id = result[0]
+    project_id = cursor.fetchone()[0]
     cursor.execute("DELETE FROM duct_entries WHERE id=?", (id,))
     conn.commit()
     conn.close()
