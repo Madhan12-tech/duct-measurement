@@ -1,28 +1,25 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta charset="UTF-8">
   <title>Duct Entry</title>
-
-  <!-- Bootstrap + FontAwesome -->
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  
+  <!-- Bootstrap & FontAwesome -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
-
+  
   <style>
     body.dark-mode {
       background-color: #121212;
-      color: #ffffff;
+      color: #f1f1f1;
     }
-    .dark-mode .card {
-      background-color: #1e1e1e;
+    .dark-mode .card, .dark-mode .form-control, .dark-mode .form-select, .dark-mode table {
+      background-color: #1f1f1f !important;
+      color: #f1f1f1 !important;
     }
-    .dark-mode input, .dark-mode select {
-      background-color: #2a2a2a;
-      color: #fff;
-    }
-    .dark-mode .table {
-      color: #fff;
+    .dark-mode .table-bordered td, .dark-mode .table-bordered th {
+      border-color: #333;
     }
     th {
       background-color: #0d6efd;
@@ -33,26 +30,27 @@
       font-weight: bold;
     }
     .dark-mode tfoot td {
-      background-color: #1f1f1f;
+      background-color: #2b2b2b;
+    }
+    .dark-toggle {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      z-index: 1000;
     }
   </style>
 </head>
 <body>
 
-<div class="container py-3">
+<div class="dark-toggle">
+  <button class="btn btn-sm btn-dark" onclick="toggleDarkMode()"><i class="fa fa-moon"></i></button>
+</div>
 
-  <!-- Dark mode switch -->
-  <div class="d-flex justify-content-end mb-2">
-    <div class="form-check form-switch">
-      <input class="form-check-input" type="checkbox" id="darkSwitch">
-      <label class="form-check-label" for="darkSwitch">Dark Mode</label>
-    </div>
-  </div>
+<div class="container">
 
-  <!-- Flash messages -->
   {% with messages = get_flashed_messages() %}
     {% if messages %}
-      <div class="alert alert-success">
+      <div class="alert alert-success mt-3">
         {% for message in messages %}
           <div>{{ message }}</div>
         {% endfor %}
@@ -61,14 +59,14 @@
   {% endwith %}
 
   <!-- Project Info -->
-  <div class="card mb-3">
+  <div class="card mt-3">
     <div class="card-body">
-      <h4>Project Info</h4>
+      <h4 class="card-title">Project Info</h4>
       {% if project %}
         <p><strong>{{ project[1] }}</strong> | Enquiry: {{ project[2] }} | Office: {{ project[3] }} |
-          Engineer: {{ project[4] }} | Contact: {{ project[5] }} | Location: {{ project[6] }}</p>
+        Engineer: {{ project[4] }} | Contact: {{ project[5] }} | Location: {{ project[6] }}</p>
       {% else %}
-        <p>No project data.</p>
+        <p>No project information available.</p>
       {% endif %}
     </div>
   </div>
@@ -76,7 +74,7 @@
   <div class="row">
     <!-- Form -->
     <div class="col-md-4">
-      <div class="card">
+      <div class="card mt-3">
         <div class="card-header bg-primary text-white">
           {{ edit_entry and "Edit" or "Add" }} Duct Entry
         </div>
@@ -87,7 +85,7 @@
               <input class="form-control" type="text" name="duct_no" placeholder="Duct No" required value="{{ edit_entry[1] if edit_entry else '' }}">
             </div>
             <div class="mb-2">
-              <select class="form-select" name="duct_type" id="duct_type" required onchange="toggleFactor()">
+              <select class="form-select" name="duct_type" id="duct_type" required onchange="toggleFactorField()">
                 <option value="">Select Type</option>
                 {% for t in ['ST','SHOE','RED','OFFSET','DUM','ELB','VANES'] %}
                   <option value="{{ t }}" {% if edit_entry and edit_entry[2] == t %}selected{% endif %}>{{ t }}</option>
@@ -97,13 +95,12 @@
             {% for i in [3,4,5,6,7,8,9] %}
               <div class="mb-2">
                 <input class="form-control" type="number" step="any" name="{{ ['width1','height1','width2','height2','length_or_radius','quantity','degree_or_offset'][loop.index0] }}"
-                       placeholder="{{ ['Width1','Height1','Width2','Height2','Length/Radius','Quantity','Degree/Offset'][loop.index0] }} (mm)"
-                       value="{{ edit_entry[i] if edit_entry else '' }}">
+                placeholder="{{ ['Width1','Height1','Width2','Height2','Length/Radius','Quantity','Degree/Offset'][loop.index0] }} (mm)"
+                value="{{ edit_entry[i] if edit_entry else '' }}">
               </div>
             {% endfor %}
-            <div class="mb-2" id="factorDiv" style="display:none;">
-              <input class="form-control" type="number" step="any" name="factor" placeholder="Factor (default 1.5)"
-                value="{{ edit_entry[16] if edit_entry else 1.5 }}">
+            <div class="mb-2" id="factorField" style="display:none;">
+              <input class="form-control" type="number" step="any" name="factor" placeholder="Factor" value="{{ edit_entry[16] if edit_entry and edit_entry|length > 16 else '1.5' }}">
             </div>
             <button type="submit" class="btn btn-success w-100">
               <i class="fa fa-check"></i> {{ edit_entry and "Update" or "Add" }}
@@ -115,16 +112,16 @@
 
     <!-- Table -->
     <div class="col-md-8">
-      <div class="card">
+      <div class="card mt-3">
         <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
-          <span><i class="fa fa-table"></i> Entries</span>
+          <span><i class="fa fa-table"></i> Live Entries</span>
           <input class="form-control form-control-sm w-50" id="searchInput" onkeyup="filterTable()" placeholder="Search...">
         </div>
         <div class="card-body p-2">
           <div class="d-flex gap-2 mb-3 flex-wrap">
             <form action="/export_excel" method="get"><button class="btn btn-outline-success btn-sm"><i class="fa fa-file-excel"></i> Excel</button></form>
             <form action="/export_pdf" method="get"><button class="btn btn-outline-danger btn-sm"><i class="fa fa-file-pdf"></i> PDF</button></form>
-            <form action="/submit_all" method="post"><button class="btn btn-outline-primary btn-sm"><i class="fa fa-paper-plane"></i> Submit</button></form>
+            <form action="/submit_all" method="post"><button class="btn btn-outline-primary btn-sm"><i class="fa fa-paper-plane"></i> Submit All</button></form>
             <button onclick="window.print()" class="btn btn-outline-secondary btn-sm"><i class="fa fa-print"></i> Print</button>
           </div>
 
@@ -192,6 +189,7 @@
 </div>
 
 <!-- Scripts -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
   function filterTable() {
     const input = document.getElementById("searchInput").value.toLowerCase();
@@ -201,27 +199,25 @@
     });
   }
 
-  function toggleFactor() {
-    const ductType = document.getElementById("duct_type").value;
-    const factorDiv = document.getElementById("factorDiv");
-    const typesWithFactor = ['RED', 'OFFSET', 'SHOE', 'ELB'];
-    factorDiv.style.display = typesWithFactor.includes(ductType) ? 'block' : 'none';
+  function toggleDarkMode() {
+    const body = document.body;
+    body.classList.toggle("dark-mode");
+    localStorage.setItem("dark-mode", body.classList.contains("dark-mode"));
   }
 
-  document.addEventListener('DOMContentLoaded', function () {
-    toggleFactor();
-    const darkSwitch = document.getElementById('darkSwitch');
-    if (localStorage.getItem('darkMode') === 'true') {
-      document.body.classList.add('dark-mode');
-      darkSwitch.checked = true;
-    }
-    darkSwitch.addEventListener('change', () => {
-      document.body.classList.toggle('dark-mode');
-      localStorage.setItem('darkMode', darkSwitch.checked);
-    });
-  });
-</script>
+  function toggleFactorField() {
+    const selected = document.getElementById("duct_type").value;
+    const show = ['RED','OFFSET','SHOE','ELB'].includes(selected);
+    document.getElementById("factorField").style.display = show ? 'block' : 'none';
+  }
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  window.onload = () => {
+    if (localStorage.getItem("dark-mode") === "true") {
+      document.body.classList.add("dark-mode");
+    }
+    toggleFactorField();
+  }
+</script>
 </body>
 </html>
+
