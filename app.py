@@ -187,14 +187,44 @@ def add_duct():
 def edit_duct(id):
     conn = sqlite3.connect('data.db')
     cursor = conn.cursor()
+
     cursor.execute("SELECT * FROM duct_entries WHERE id=?", (id,))
     entry = cursor.fetchone()
+
     cursor.execute("SELECT * FROM projects ORDER BY id DESC LIMIT 1")
     project = cursor.fetchone()
+
     cursor.execute("SELECT * FROM duct_entries ORDER BY id DESC")
     entries = cursor.fetchall()
+
+    total_qty = sum(e[8] for e in entries)
+    total_area = sum(e[11] for e in entries)
+    total_bolts = sum(e[12] for e in entries)
+    total_cleat = sum(e[13] for e in entries)
+    total_gasket = sum(e[14] for e in entries)
+    total_corner = sum(e[15] for e in entries)
+    area_24g = sum(e[11] for e in entries if e[10] == '24g')
+    area_22g = sum(e[11] for e in entries if e[10] == '22g')
+    area_20g = sum(e[11] for e in entries if e[10] == '20g')
+    area_18g = sum(e[11] for e in entries if e[10] == '18g')
+
     conn.close()
-    return render_template('duct_entry.html', edit_entry=entry, project=project, entries=entries)
+
+    return render_template('duct_entry.html',
+        edit_entry=entry,
+        project=project,
+        entries=entries,
+        total_qty=total_qty,
+        total_area=total_area,
+        total_bolts=total_bolts,
+        total_cleat=total_cleat,
+        total_gasket=total_gasket,
+        total_corner=total_corner,
+        area_24g=area_24g,
+        area_22g=area_22g,
+        area_20g=area_20g,
+        area_18g=area_18g
+    )
 
 @app.route('/delete/<int:id>')
 def delete_duct(id):
@@ -220,7 +250,7 @@ def export_excel():
     output = BytesIO()
     writer = pd.ExcelWriter(output, engine='openpyxl')
     df.to_excel(writer, index=False, sheet_name='Duct Entries')
-    writer.save()
+    writer.close()
     output.seek(0)
 
     return send_file(output, as_attachment=True, download_name='duct_entries.xlsx', mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
@@ -256,4 +286,3 @@ def export_pdf():
 
 if __name__ == '__main__':
     app.run(debug=True)
-
