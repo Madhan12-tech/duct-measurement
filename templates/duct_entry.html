@@ -1,226 +1,288 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>Duct Entry</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+from flask import Flask, render_template, request, redirect, url_for, flash, send_file
+import sqlite3
+from datetime import datetime
+import pandas as pd
+from io import BytesIO
+from reportlab.lib.pagesizes import letter
+from reportlab.pdfgen import canvas
 
-  <!-- Bootstrap + FontAwesome -->
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+app = Flask(__name__)
+app.secret_key = 'secretkey'
 
-  <style>
-    body {
-      background-color: #f4f6f9;
-      padding: 20px;
-      transition: background-color 0.3s ease;
-    }
-    body.dark-mode {
-      background-color: #121212;
-      color: white;
-    }
-    .dark-mode .card {
-      background-color: #1f1f1f;
-      color: white;
-    }
-    .dark-mode input, .dark-mode select {
-      background-color: #333;
-      color: white;
-      border-color: #555;
-    }
-    th {
-      background-color: #0d6efd;
-      color: white;
-    }
-    tfoot td {
-      background-color: #e7f1ff;
-      font-weight: bold;
-    }
-    .dark-mode tfoot td {
-      background-color: #1a1a1a;
-    }
-  </style>
+def init_db():
+    conn = sqlite3.connect('data.db')
+    c = conn.cursor()
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS duct_entries (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            duct_no TEXT,
+            duct_type TEXT,
+            width1 REAL,
+            height1 REAL,
+            width2 REAL,
+            height2 REAL,
+            length_or_radius REAL,
+            quantity INTEGER,
+            degree_or_offset REAL,
+            gauge TEXT,
+            area REAL,
+            nuts_bolts INTEGER,
+            cleat INTEGER,
+            gasket REAL,
+            corner_pieces INTEGER,
+            timestamp DATETIME
+        )
+    ''')
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS projects (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            project_name TEXT,
+            enquiry_no TEXT,
+            office_no TEXT,
+            site_engineer TEXT,
+            site_contact TEXT,
+            location TEXT,
+            timestamp DATETIME
+        )
+    ''')
+    conn.commit()
+    conn.close()
 
-  <script>
-    function filterTable() {
-      const input = document.getElementById("searchInput").value.toLowerCase();
-      const rows = document.querySelectorAll("#entriesTable tbody tr");
-      rows.forEach(row => {
-        row.style.display = row.innerText.toLowerCase().includes(input) ? "" : "none";
-      });
-    }
+init_db()
 
-    function toggleDarkMode() {
-      document.body.classList.toggle('dark-mode');
-    }
+@app.route('/')
+def index():
+    return render_template('home.html')
 
-    function toggleFactorField() {
-      const type = document.getElementById("ductType").value;
-      const factorField = document.getElementById("factorField");
-      if (["RED", "OFFSET", "SHOE", "ELB"].includes(type)) {
-        factorField.style.display = "block";
-      } else {
-        factorField.style.display = "none";
-      }
-    }
-  </script>
-</head>
-<body>
+@app.route('/save_project', methods=['POST'])
+def save_project():
+    form = request.form
+    conn = sqlite3.connect('data.db')
+    c = conn.cursor()
+    c.execute('''
+        INSERT INTO projects (project_name, enquiry_no, office_no, site_engineer, site_contact, location, timestamp)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+    ''', (
+        form['project_name'],
+        form['enquiry_no'],
+        form['office_no'],
+        form['site_engineer'],
+        form['site_contact'],
+        form['location'],
+        datetime.now()
+    ))
+    conn.commit()
+    conn.close()
+    flash('Project saved successfully!')
+    return redirect(url_for('home'))
 
-<div class="container">
+@app.route('/home')
+def home():
+    conn = sqlite3.connect('data.db')
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM projects ORDER BY id DESC LIMIT 1")
+    project = cursor.fetchone()
+    cursor.execute("SELECT * FROM duct_entries ORDER BY id DESC")
+    entries = cursor.fetchall()
 
-  <div class="d-flex justify-content-between align-items-center mb-3">
-    <h4>Duct Measurement</h4>
-    <button class="btn btn-dark btn-sm" onclick="toggleDarkMode()">
-      <i class="fa fa-moon"></i> Toggle Dark Mode
-    </button>
-  </div>
+    total_qty = sum(e[8] for e in entries)
+    total_area = sum(e[11] for e in entries)
+    total_bolts = sum(e[12] for e in entries)
+    total_cleat = sum(e[13] for e in entries)
+    total_gasket = sum(e[14] for e in entries)
+    total_corner = sum(e[15] for e in entries)
+    area_24g = sum(e[11] for e in entries if e[10] == '24g')
+    area_22g = sum(e[11] for e in entries if e[10] == '22g')
+    area_20g = sum(e[11] for e in entries if e[10] == '20g')
+    area_18g = sum(e[11] for e in entries if e[10] == '18g')
 
-  {% with messages = get_flashed_messages() %}
-    {% if messages %}
-      <div class="alert alert-success">
-        {% for message in messages %}
-          <div>{{ message }}</div>
-        {% endfor %}
-      </div>
-    {% endif %}
-  {% endwith %}
+    conn.close()
+    return render_template('duct_entry.html',
+        project=project,
+        entries=entries,
+        total_qty=total_qty,
+        total_area=total_area,
+        total_bolts=total_bolts,
+        total_cleat=total_cleat,
+        total_gasket=total_gasket,
+        total_corner=total_corner,
+        area_24g=area_24g,
+        area_22g=area_22g,
+        area_20g=area_20g,
+        area_18g=area_18g
+    )
 
-  <div class="card">
-    <div class="card-body">
-      <h5 class="card-title">Project Info</h5>
-      {% if project %}
-        <p><strong>{{ project[1] }}</strong> | Enquiry: {{ project[2] }} | Office: {{ project[3] }} |
-          Engineer: {{ project[4] }} | Contact: {{ project[5] }} | Location: {{ project[6] }}</p>
-      {% else %}
-        <p>No project selected.</p>
-      {% endif %}
-    </div>
-  </div>
+@app.route('/add_duct', methods=['POST'])
+def add_duct():
+    form = request.form
+    id_ = form.get('id')
+    duct_no = form['duct_no']
+    duct_type = form['duct_type']
+    width1 = float(form['width1'])
+    height1 = float(form['height1'])
+    width2 = float(form['width2'] or 0)
+    height2 = float(form['height2'] or 0)
+    length_or_radius = float(form['length_or_radius'])
+    quantity = int(form['quantity'])
+    degree_or_offset = float(form['degree_or_offset'] or 0)
 
-  <div class="row mt-3">
-    <!-- Form -->
-    <div class="col-md-4">
-      <div class="card">
-        <div class="card-header bg-primary text-white">
-          {{ edit_entry and "Edit" or "Add" }} Duct Entry
-        </div>
-        <div class="card-body">
-          <form method="POST" action="/add_duct">
-            <input type="hidden" name="id" value="{{ edit_entry[0] if edit_entry else '' }}">
-            <input type="hidden" name="project_id" value="{{ project_id }}">
-            <div class="mb-2">
-              <input class="form-control" type="text" name="duct_no" placeholder="Duct No" required value="{{ edit_entry[2] if edit_entry else '' }}">
-            </div>
-            <div class="mb-2">
-              <select class="form-select" id="ductType" name="duct_type" onchange="toggleFactorField()" required>
-                <option value="">Select Type</option>
-                {% for t in ['ST','SHOE','RED','OFFSET','DUM','ELB','VANES'] %}
-                  <option value="{{ t }}" {% if edit_entry and edit_entry[3] == t %}selected{% endif %}>{{ t }}</option>
-                {% endfor %}
-              </select>
-            </div>
-            {% for field, label in [('width1','Width1'),('height1','Height1'),('width2','Width2'),('height2','Height2'),('length_or_radius','Length/Radius'),('quantity','Quantity'),('degree_or_offset','Degree/Offset')] %}
-              <div class="mb-2">
-                <input class="form-control" type="number" step="any" name="{{ field }}" placeholder="{{ label }} (mm)" value="{{ edit_entry[4 + loop.index0] if edit_entry else '' }}">
-              </div>
-            {% endfor %}
-            <div class="mb-2" id="factorField" style="display: none;">
-              <input class="form-control" type="number" name="factor" step="any" placeholder="Factor" value="{{ edit_entry[11] if edit_entry and edit_entry[11] else '1.0' }}">
-            </div>
-            <button type="submit" class="btn btn-success w-100">
-              <i class="fa fa-check"></i> {{ edit_entry and "Update" or "Add" }}
-            </button>
-          </form>
-        </div>
-      </div>
-    </div>
+    size_sum = width1 , height1
+    if size_sum <= 750:
+        gauge = '24g'
+    elif size_sum <= 1200:
+        gauge = '22g'
+    elif size_sum <= 1800:
+        gauge = '20g'
+    else:
+        gauge = '18g'
 
-    <!-- Table -->
-    <div class="col-md-8">
-      <div class="card">
-        <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
-          <span><i class="fa fa-table"></i> Live Entries</span>
-          <input class="form-control form-control-sm w-50" id="searchInput" onkeyup="filterTable()" placeholder="Search...">
-        </div>
-        <div class="card-body p-2">
-          <div class="d-flex gap-2 mb-3 flex-wrap">
-            <form action="/export_excel/{{ project_id }}" method="get"><button class="btn btn-outline-success btn-sm"><i class="fa fa-file-excel"></i> Excel</button></form>
-            <form action="/export_pdf/{{ project_id }}" method="get"><button class="btn btn-outline-danger btn-sm"><i class="fa fa-file-pdf"></i> PDF</button></form>
-            <button onclick="window.print()" class="btn btn-outline-secondary btn-sm"><i class="fa fa-print"></i> Print</button>
-          </div>
+    if duct_type == 'ST':
+        area = 2 * (width1 + height1) / 1000 * (length_or_radius / 1000) * quantity
+    elif duct_type == 'RED':
+        area = (width1 + height1 + width2 + height2) / 1000 * (length_or_radius / 1000) * quantity * 1.5
+    elif duct_type == 'DUM':
+        area = (width1 * height1) / 1_000_000 * quantity
+    elif duct_type == 'OFFSET':
+        area = (width1 + height1 + width2 + height2) / 1000 * ((length_or_radius + degree_or_offset) / 1000) * quantity * 1.5
+    elif duct_type == 'SHOE':
+        area = (width1 + height1) * 2 / 1000 * (length_or_radius / 1000) * quantity * 1.5
+    elif duct_type == 'VANES':
+        area = width1 / 1000 * (2 * 3.14 * (width1 / 1000) / 2) / 4 * quantity
+    elif duct_type == 'ELB':
+        area = 2 * (width1 + height1) / 1000 * ((height1 / 2 / 1000) + (length_or_radius / 1000) * (3.14 * (degree_or_offset / 180))) * quantity * 1.5
+    else:
+        area = 0
 
-          <div class="table-responsive">
-            <table class="table table-bordered table-sm" id="entriesTable">
-              <thead>
-                <tr>
-                  <th>#</th><th>Duct No</th><th>Type</th><th>W1</th><th>H1</th><th>W2</th><th>H2</th>
-                  <th>L/R</th><th>Qty</th><th>Deg/Off</th><th>Factor</th><th>Gauge</th>
-                  <th>24g</th><th>22g</th><th>20g</th><th>18g</th>
-                  <th>Area</th><th>Bolt</th><th>Cleat</th><th>Gasket</th><th>Corner</th><th>Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {% for entry in entries %}
-                <tr>
-                  <td>{{ loop.index }}</td>
-                  <td>{{ entry[2] }}</td>
-                  <td>{{ entry[3] }}</td>
-                  <td>{{ entry[4] }}</td>
-                  <td>{{ entry[5] }}</td>
-                  <td>{{ entry[6] }}</td>
-                  <td>{{ entry[7] }}</td>
-                  <td>{{ entry[8] }}</td>
-                  <td>{{ entry[9] }}</td>
-                  <td>{{ entry[10] }}</td>
-                  <td>{{ entry[11] }}</td>
-                  <td>{{ entry[12] }}</td>
-                  <td>{{ "%.2f"|format(entry[13]) if entry[12] == '24g' else '' }}</td>
-                  <td>{{ "%.2f"|format(entry[13]) if entry[12] == '22g' else '' }}</td>
-                  <td>{{ "%.2f"|format(entry[13]) if entry[12] == '20g' else '' }}</td>
-                  <td>{{ "%.2f"|format(entry[13]) if entry[12] == '18g' else '' }}</td>
-                  <td>{{ "%.2f"|format(entry[13]) }}</td>
-                  <td>{{ entry[14] }}</td>
-                  <td>{{ entry[15] }}</td>
-                  <td>{{ "%.2f"|format(entry[16]) }}</td>
-                  <td>{{ entry[17] }}</td>
-                  <td>
-                    <a href="/edit/{{ entry[0] }}" class="text-primary"><i class="fa fa-edit"></i></a>
-                    <a href="/delete/{{ entry[0] }}" onclick="return confirm('Delete this entry?')" class="text-danger"><i class="fa fa-trash"></i></a>
-                  </td>
-                </tr>
-                {% endfor %}
-              </tbody>
-              <tfoot>
-                <tr>
-                  <td colspan="8"><strong>Total</strong></td>
-                  <td>{{ total_qty }}</td><td></td><td></td>
-                  <td></td>
-                  <td>{{ "%.2f"|format(area_24g) }}</td>
-                  <td>{{ "%.2f"|format(area_22g) }}</td>
-                  <td>{{ "%.2f"|format(area_20g) }}</td>
-                  <td>{{ "%.2f"|format(area_18g) }}</td>
-                  <td>{{ "%.2f"|format(total_area) }}</td>
-                  <td>{{ total_bolts }}</td>
-                  <td>{{ total_cleat }}</td>
-                  <td>{{ "%.2f"|format(total_gasket) }}</td>
-                  <td>{{ total_corner }}</td><td></td>
-                </tr>
-              </tfoot>
-            </table>
-          </div>
+    cleat = quantity * (4 if gauge == '24g' else 8 if gauge == '22g' else 10 if gauge == '20g' else 12)
+    nuts_bolts = quantity * 4
+    gasket = (width1 + height1 + width2 + height2) / 1000 * quantity
+    corner_pieces = 0 if duct_type == 'DUM' else quantity * 8
 
-        </div>
-      </div>
-    </div>
-  </div>
+    conn = sqlite3.connect('data.db')
+    cursor = conn.cursor()
 
-</div>
+    if id_:
+        cursor.execute('''
+            UPDATE duct_entries SET duct_no=?, duct_type=?, width1=?, height1=?, width2=?, height2=?,
+            length_or_radius=?, quantity=?, degree_or_offset=?, gauge=?, area=?, nuts_bolts=?, cleat=?,
+            gasket=?, corner_pieces=?, timestamp=? WHERE id=?
+        ''', (duct_no, duct_type, width1, height1, width2, height2, length_or_radius, quantity, degree_or_offset,
+              gauge, area, nuts_bolts, cleat, gasket, corner_pieces, datetime.now(), id_))
+        flash('Duct entry updated!')
+    else:
+        cursor.execute('''
+            INSERT INTO duct_entries (
+                duct_no, duct_type, width1, height1, width2, height2, length_or_radius, quantity,
+                degree_or_offset, gauge, area, nuts_bolts, cleat, gasket, corner_pieces, timestamp
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (duct_no, duct_type, width1, height1, width2, height2, length_or_radius, quantity, degree_or_offset,
+              gauge, area, nuts_bolts, cleat, gasket, corner_pieces, datetime.now()))
+        flash('Duct entry added!')
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-<script>
-  // Initialize factor field if editing
-  window.onload = toggleFactorField;
-</script>
-</body>
-</html>
+    conn.commit()
+    conn.close()
+    return redirect(url_for('home'))
+
+@app.route('/edit/<int:id>')
+def edit_duct(id):
+    conn = sqlite3.connect('data.db')
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT * FROM duct_entries WHERE id=?", (id,))
+    entry = cursor.fetchone()
+
+    cursor.execute("SELECT * FROM projects ORDER BY id DESC LIMIT 1")
+    project = cursor.fetchone()
+
+    cursor.execute("SELECT * FROM duct_entries ORDER BY id DESC")
+    entries = cursor.fetchall()
+
+    total_qty = sum(e[8] for e in entries)
+    total_area = sum(e[11] for e in entries)
+    total_bolts = sum(e[12] for e in entries)
+    total_cleat = sum(e[13] for e in entries)
+    total_gasket = sum(e[14] for e in entries)
+    total_corner = sum(e[15] for e in entries)
+    area_24g = sum(e[11] for e in entries if e[10] == '24g')
+    area_22g = sum(e[11] for e in entries if e[10] == '22g')
+    area_20g = sum(e[11] for e in entries if e[10] == '20g')
+    area_18g = sum(e[11] for e in entries if e[10] == '18g')
+
+    conn.close()
+
+    return render_template('duct_entry.html',
+        edit_entry=entry,
+        project=project,
+        entries=entries,
+        total_qty=total_qty,
+        total_area=total_area,
+        total_bolts=total_bolts,
+        total_cleat=total_cleat,
+        total_gasket=total_gasket,
+        total_corner=total_corner,
+        area_24g=area_24g,
+        area_22g=area_22g,
+        area_20g=area_20g,
+        area_18g=area_18g
+    )
+
+@app.route('/delete/<int:id>')
+def delete_duct(id):
+    conn = sqlite3.connect('data.db')
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM duct_entries WHERE id=?", (id,))
+    conn.commit()
+    conn.close()
+    flash('Duct entry deleted!')
+    return redirect(url_for('home'))
+
+@app.route('/submit_all', methods=['POST'])
+def submit_all():
+    flash('All duct entries submitted successfully!')
+    return redirect(url_for('home'))
+
+@app.route('/export_excel')
+def export_excel():
+    conn = sqlite3.connect('data.db')
+    df = pd.read_sql_query("SELECT * FROM duct_entries", conn)
+    conn.close()
+
+    output = BytesIO()
+    writer = pd.ExcelWriter(output, engine='openpyxl')
+    df.to_excel(writer, index=False, sheet_name='Duct Entries')
+    writer.close()
+    output.seek(0)
+
+    return send_file(output, as_attachment=True, download_name='duct_entries.xlsx', mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+
+@app.route('/export_pdf')
+def export_pdf():
+    conn = sqlite3.connect('data.db')
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM duct_entries")
+    data = cursor.fetchall()
+    conn.close()
+
+    output = BytesIO()
+    pdf = canvas.Canvas(output, pagesize=letter)
+    width, height = letter
+    y = height - 40
+    pdf.setFont("Helvetica", 10)
+    pdf.drawString(30, y, "Duct Entries Report")
+    y -= 20
+
+    headers = ["ID", "Duct No", "Type", "W1", "H1", "W2", "H2", "L/R", "Qty", "Deg/Off", "Gauge"]
+    for row in data:
+        row_data = ", ".join(str(row[i]) for i in range(11))
+        if y < 40:
+            pdf.showPage()
+            y = height - 40
+        pdf.drawString(30, y, row_data)
+        y -= 15
+
+    pdf.save()
+    output.seek(0)
+    return send_file(output, as_attachment=True, download_name='duct_entries.pdf', mimetype='application/pdf')
+
+if __name__ == '__main__':
+    app.run(debug=True)
