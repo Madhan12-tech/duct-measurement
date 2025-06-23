@@ -30,7 +30,7 @@ def init_db():
             cleat INTEGER,
             gasket REAL,
             corner_pieces INTEGER,
-            factor REAL,
+            factor REAL DEFAULT 1.5,
             timestamp DATETIME
         )
     ''')
@@ -119,26 +119,26 @@ def add_duct():
     id_ = form.get('id')
     duct_no = form['duct_no']
     duct_type = form['duct_type']
-    width1 = float(form['width1'])
-    height1 = float(form['height1'])
+    width1 = float(form['width1'] or 0)
+    height1 = float(form['height1'] or 0)
     width2 = float(form['width2'] or 0)
     height2 = float(form['height2'] or 0)
-    length_or_radius = float(form['length_or_radius'])
-    quantity = int(form['quantity'])
+    length_or_radius = float(form['length_or_radius'] or 0)
+    quantity = int(form['quantity'] or 1)
     degree_or_offset = float(form['degree_or_offset'] or 0)
-    factor = float(form['factor'] or 1.5)
+    factor = float(form.get('factor') or 1.5)
 
-    # Corrected gauge logic
-    if width1 <= 750 and height1 <= 750:
+    # Gauge based only on width1, height1
+    if width1 <= 375 and height1 <= 375:
         gauge = '24g'
-    elif width1 <= 1200 and height1 <= 1200:
+    elif width1 <= 600 and height1 <= 600:
         gauge = '22g'
-    elif width1 <= 1800 and height1 <= 1800:
+    elif width1 <= 900 and height1 <= 900:
         gauge = '20g'
     else:
         gauge = '18g'
 
-    # Area calculation based on type
+    # Area calculation
     if duct_type == 'ST':
         area = 2 * (width1 + height1) / 1000 * (length_or_radius / 1000) * quantity
     elif duct_type == 'RED':
@@ -223,7 +223,7 @@ def export_excel():
     output = BytesIO()
     writer = pd.ExcelWriter(output, engine='openpyxl')
     df.to_excel(writer, index=False, sheet_name='Duct Entries')
-    writer.save()
+    writer.close()
     output.seek(0)
 
     return send_file(output, as_attachment=True, download_name='duct_entries.xlsx', mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
@@ -244,6 +244,7 @@ def export_pdf():
     pdf.drawString(30, y, "Duct Entries Report")
     y -= 20
 
+    headers = ["ID", "Duct No", "Type", "W1", "H1", "W2", "H2", "L/R", "Qty", "Deg/Off", "Gauge"]
     for row in data:
         row_data = ", ".join(str(row[i]) for i in range(11))
         if y < 40:
