@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, flash
+from flask import Flask, render_template, request, redirect, url_for, flash, send_file
 import sqlite3
 from datetime import datetime
 
@@ -9,7 +9,6 @@ def init_db():
     conn = sqlite3.connect('data.db')
     c = conn.cursor()
 
-    # Create duct_entries table
     c.execute('''
         CREATE TABLE IF NOT EXISTS duct_entries (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -28,11 +27,14 @@ def init_db():
             cleat INTEGER,
             gasket REAL,
             corner_pieces INTEGER,
+            g24 TEXT,
+            g22 TEXT,
+            g20 TEXT,
+            g18 TEXT,
             timestamp DATETIME
         )
     ''')
 
-    # Create projects table
     c.execute('''
         CREATE TABLE IF NOT EXISTS projects (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -45,7 +47,6 @@ def init_db():
             timestamp DATETIME
         )
     ''')
-
     conn.commit()
     conn.close()
 
@@ -91,7 +92,6 @@ def save_project():
 @app.route('/add_duct', methods=['POST'])
 def add_duct():
     form = request.form
-    duct_id = form.get('id')
     duct_no = form['duct_no']
     duct_type = form['duct_type']
     width1 = float(form['width1'])
@@ -102,7 +102,6 @@ def add_duct():
     quantity = int(form['quantity'])
     degree_or_offset = float(form['degree_or_offset'] or 0)
 
-    # Gauge
     size_sum = width1 + height1
     if size_sum <= 750:
         gauge = '24g'
@@ -113,7 +112,11 @@ def add_duct():
     else:
         gauge = '18g'
 
-    # Area based on duct_type
+    g24 = '✓' if gauge == '24g' else ''
+    g22 = '✓' if gauge == '22g' else ''
+    g20 = '✓' if gauge == '20g' else ''
+    g18 = '✓' if gauge == '18g' else ''
+
     if duct_type == 'ST':
         area = 2 * (width1 / 1000 + height1 / 1000) * (length_or_radius / 1000) * quantity
     elif duct_type == 'RED':
@@ -131,8 +134,11 @@ def add_duct():
     else:
         area = 0
 
-    # Cleat
-    cleat = {'24g': quantity * 4, '22g': quantity * 8, '20g': quantity * 10, '18g': quantity * 12}.get(gauge, 0)
+    if gauge == '24g': cleat = quantity * 4
+    elif gauge == '22g': cleat = quantity * 8
+    elif gauge == '20g': cleat = quantity * 10
+    elif gauge == '18g': cleat = quantity * 12
+    else: cleat = 0
 
     nuts_bolts = quantity * 4
     gasket = (width1 + height1 + width2 + height2) / 1000 * quantity
@@ -140,60 +146,16 @@ def add_duct():
 
     conn = sqlite3.connect('data.db')
     cursor = conn.cursor()
-
-    if duct_id:  # Update
-        cursor.execute('''
-            UPDATE duct_entries SET 
-                duct_no=?, duct_type=?, width1=?, height1=?, width2=?, height2=?,
-                length_or_radius=?, quantity=?, degree_or_offset=?, gauge=?, area=?,
-                nuts_bolts=?, cleat=?, gasket=?, corner_pieces=?, timestamp=?
-            WHERE id=?
-        ''', (
-            duct_no, duct_type, width1, height1, width2, height2,
-            length_or_radius, quantity, degree_or_offset, gauge, area,
-            nuts_bolts, cleat, gasket, corner_pieces, datetime.now(), duct_id
-        ))
-        flash('Duct entry updated!')
-    else:  # Insert
-        cursor.execute('''
-            INSERT INTO duct_entries (
-                duct_no, duct_type, width1, height1, width2, height2, length_or_radius, quantity,
-                degree_or_offset, gauge, area, nuts_bolts, cleat, gasket, corner_pieces, timestamp
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ''', (
-            duct_no, duct_type, width1, height1, width2, height2, length_or_radius, quantity,
-            degree_or_offset, gauge, area, nuts_bolts, cleat, gasket, corner_pieces, datetime.now()
-        ))
-        flash('Duct entry added!')
-
+    cursor.execute('''
+        INSERT INTO duct_entries (
+            duct_no, duct_type, width1, height1, width2, height2, length_or_radius, quantity, degree_or_offset,
+            gauge, area, nuts_bolts, cleat, gasket, corner_pieces, g24, g22, g20, g18, timestamp
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ''', (
+        duct_no, duct_type, width1, height1, width2, height2, length_or_radius, quantity, degree_or_offset,
+        gauge, area, nuts_bolts, cleat, gasket, corner_pieces, g24, g22, g20, g18, datetime.now()
+    ))
     conn.commit()
     conn.close()
-    return redirect(url_for('home'))
-
-@app.route('/edit/<int:id>')
-def edit_duct(id):
-    conn = sqlite3.connect('data.db')
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM duct_entries WHERE id=?", (id,))
-    entry = cursor.fetchone()
-    cursor.execute("SELECT * FROM projects ORDER BY id DESC LIMIT 1")
-    project = cursor.fetchone()
-    cursor.execute("SELECT * FROM duct_entries ORDER BY id DESC")
-    entries = cursor.fetchall()
-    conn.close()
-    return render_template('duct_entry.html', project=project, entries=entries, edit_entry=entry)
-
-@app.route('/delete/<int:id>')
-def delete_duct(id):
-    conn = sqlite3.connect('data.db')
-    cursor = conn.cursor()
-    cursor.execute("DELETE FROM duct_entries WHERE id=?", (id,))
-    conn.commit()
-    conn.close()
-    flash('Duct entry deleted!')
-    return redirect(url_for('home'))
-
-@app.route('/submit_all', methods=['POST'])
-def submit_all():
-    flash('All duct entries submitted successfully!')
+    flash('Duct entry added!')
     return redirect(url_for('home'))
