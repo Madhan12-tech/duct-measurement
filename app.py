@@ -243,31 +243,85 @@ def delete_duct(id):
 
 @app.route('/export_excel/<int:project_id>')
 def export_excel(project_id):
+    import openpyxl
+    from openpyxl.utils import get_column_letter
+    from openpyxl.styles import Font
+
     conn = sqlite3.connect('data.db')
     c = conn.cursor()
     c.execute("SELECT * FROM projects WHERE id=?", (project_id,))
     project = c.fetchone()
-    df = pd.read_sql_query("SELECT * FROM duct_entries WHERE project_id=?", conn, params=(project_id,))
+    c.execute("SELECT * FROM duct_entries WHERE project_id=?", (project_id,))
+    entries = c.fetchall()
     conn.close()
 
     output = BytesIO()
-    writer = pd.ExcelWriter(output, engine='openpyxl')
-    project_df = pd.DataFrame([{
-        "Project Name": project[1],
-        "Enquiry No": project[2],
-        "Office No": project[3],
-        "Engineer": project[4],
-        "Contact": project[5],
-        "Location": project[6],
-    }])
-    project_df.to_excel(writer, index=False, sheet_name='Project Info')
-    df.to_excel(writer, index=False, sheet_name='Duct Entries', startrow=5)
-    writer.close()
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Duct Entries"
+
+    # Project Info
+    ws['A1'] = "Project:"
+    ws['B1'] = project[1]
+    ws['A2'] = "Enquiry No:"
+    ws['B2'] = project[2]
+    ws['C2'] = "Office No:"
+    ws['D2'] = project[3]
+    ws['A3'] = "Site Engineer:"
+    ws['B3'] = project[4]
+    ws['C3'] = "Site Contact:"
+    ws['D3'] = project[5]
+    ws['A4'] = "Location:"
+    ws['B4'] = project[6]
+
+    # Headers
+    headers = ['#', 'Duct No', 'Type', 'W1', 'H1', 'W2', 'H2', 'Len/Rad', 'Qty',
+               'Deg/Off', 'Factor', 'Gauge', 'Area', 'Nuts', 'Cleat', 'Gasket', 'Corner']
+    ws.append([])  # Row 5: empty
+    header_row = 6
+    for col_num, header in enumerate(headers, 1):
+        cell = ws.cell(row=header_row, column=col_num)
+        cell.value = header
+        cell.font = Font(bold=True)
+
+    # Data Rows
+    start_row = header_row + 1
+    for idx, entry in enumerate(entries, start=1):
+        row = [idx, entry[2], entry[3], entry[4], entry[5], entry[6], entry[7],
+               entry[8], entry[9], entry[10], entry[11], entry[12], entry[13],
+               entry[14], entry[15], entry[16], entry[17]]
+        for col_num, val in enumerate(row, 1):
+            ws.cell(row=start_row + idx - 1, column=col_num, value=val)
+
+    # Totals Row
+    total_row = start_row + len(entries)
+    ws.cell(row=total_row, column=1, value="Total")
+    ws.merge_cells(start_row=total_row, start_column=1, end_row=total_row, end_column=8)
+    ws.cell(row=total_row, column=9, value=sum(e[9] for e in entries))    # Qty
+    ws.cell(row=total_row, column=13, value=sum(e[13] for e in entries))  # Area
+    ws.cell(row=total_row, column=14, value=sum(e[14] for e in entries))  # Nuts
+    ws.cell(row=total_row, column=15, value=sum(e[15] for e in entries))  # Cleat
+    ws.cell(row=total_row, column=16, value=sum(e[16] for e in entries))  # Gasket
+    ws.cell(row=total_row, column=17, value=sum(e[17] for e in entries))  # Corner
+
+    # Auto-size
+    for col in ws.columns:
+        max_len = max(len(str(cell.value)) if cell.value else 0 for cell in col)
+        col_letter = get_column_letter(col[0].column)
+        ws.column_dimensions[col_letter].width = max_len + 2
+
+    wb.save(output)
     output.seek(0)
-    return send_file(output, as_attachment=True, download_name='duct_entries.xlsx')
+    return send_file(output, as_attachment=True, download_name="duct_entries_with_totals.xlsx")
+
 
 @app.route('/export_pdf/<int:project_id>')
 def export_pdf(project_id):
+    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+    from reportlab.lib import colors
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib.styles import getSampleStyleSheet
+
     conn = sqlite3.connect('data.db')
     c = conn.cursor()
     c.execute("SELECT * FROM projects WHERE id=?", (project_id,))
@@ -277,25 +331,65 @@ def export_pdf(project_id):
     conn.close()
 
     buffer = BytesIO()
-    pdf = canvas.Canvas(buffer, pagesize=A4)
-    width, height = A4
-    y = height - 50
-    pdf.setFont("Helvetica-Bold", 12)
-    pdf.drawString(50, y, f"Project: {project[1]}, Enquiry: {project[2]}, Site Engineer: {project[4]}")
-    y -= 30
-    pdf.setFont("Helvetica", 9)
+    doc = SimpleDocTemplate(buffer, pagesize=A4)
+    elements = []
+    styles = getSampleStyleSheet()
 
-    for entry in entries:
-        line = ", ".join([str(entry[i]) for i in range(2, 12)])
-        if y < 50:
-            pdf.showPage()
-            y = height - 50
-        pdf.drawString(50, y, line)
-        y -= 15
+    # Project Info
+    project_info = f"""
+    <b>Project:</b> {project[1]}<br/>
+    <b>Enquiry No:</b> {project[2]} &nbsp;&nbsp;&nbsp; <b>Office No:</b> {project[3]}<br/>
+    <b>Site Engineer:</b> {project[4]} &nbsp;&nbsp;&nbsp; <b>Contact:</b> {project[5]}<br/>
+    <b>Location:</b> {project[6]}
+    """
+    elements.append(Paragraph(project_info, styles['Normal']))
+    elements.append(Spacer(1, 12))
 
-    pdf.save()
+    # Table Headers
+    headers = ['#', 'Duct No', 'Type', 'W1', 'H1', 'W2', 'H2', 'Len/Rad', 'Qty',
+               'Deg/Off', 'Factor', 'Gauge', 'Area', 'Nuts', 'Cleat', 'Gasket', 'Corner']
+    data = [headers]
+
+    # Data rows
+    for idx, entry in enumerate(entries, start=1):
+        row = [
+            idx, entry[2], entry[3], entry[4], entry[5], entry[6], entry[7],
+            entry[8], entry[9], entry[10], entry[11], entry[12], f"{entry[13]:.2f}",
+            entry[14], entry[15], f"{entry[16]:.2f}", entry[17]
+        ]
+        data.append(row)
+
+    # Totals Row
+    total_row = [
+        "Total", '', '', '', '', '', '', '', 
+        sum(e[9] for e in entries), '', '', '',
+        f"{sum(e[13] for e in entries):.2f}",
+        sum(e[14] for e in entries),
+        sum(e[15] for e in entries),
+        f"{sum(e[16] for e in entries):.2f}",
+        sum(e[17] for e in entries)
+    ]
+    data.append(total_row)
+
+    # Table Style
+    table = Table(data, repeatRows=1)
+    table.setStyle(TableStyle([
+        ('BACKGROUND', (0,0), (-1,0), colors.grey),
+        ('TEXTCOLOR',(0,0),(-1,0),colors.whitesmoke),
+        ('ALIGN',(0,0),(-1,-1),'CENTER'),
+        ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0,0), (-1,-1), 8),
+        ('BOTTOMPADDING', (0,0), (-1,0), 6),
+        ('GRID', (0,0), (-1,-1), 0.5, colors.black),
+        ('BACKGROUND', (0,-1), (-1,-1), colors.lightgrey),
+        ('FONTNAME', (0,-1), (-1,-1), 'Helvetica-Bold')
+    ]))
+
+    elements.append(table)
+    doc.build(elements)
     buffer.seek(0)
-    return send_file(buffer, as_attachment=True, download_name='duct_entries.pdf')
+    return send_file(buffer, as_attachment=True, download_name='duct_entries_with_totals.pdf')
+
 
 if __name__ == '__main__':
     app.run(debug=True)
