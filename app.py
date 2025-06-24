@@ -12,7 +12,6 @@ app.secret_key = 'secretkey'
 def init_db():
     conn = sqlite3.connect('data.db')
     c = conn.cursor()
-
     c.execute('''
         CREATE TABLE IF NOT EXISTS projects (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -25,7 +24,6 @@ def init_db():
             timestamp DATETIME
         )
     ''')
-
     c.execute('''
         CREATE TABLE IF NOT EXISTS duct_entries (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -91,7 +89,6 @@ def home(project_id):
     conn.close()
 
     def safe_total(index): return sum(float(e[index]) for e in entries if e[index] is not None)
-
     def area_by_gauge(g): return sum(e[13] for e in entries if e[12] == g)
 
     return render_template('duct_entry.html',
@@ -114,18 +111,30 @@ def home(project_id):
 def add_duct():
     form = request.form
     id_ = form.get('id')
-    project_id = int(form['project_id'])
-    duct_type = form['duct_type']
-    factor = float(form.get('factor') or 1.0) if duct_type in ['RED', 'OFFSET', 'SHOE', 'ELB'] else 1.0
 
-    width1 = float(form['width1'])
-    height1 = float(form['height1'])
-    width2 = float(form.get('width2') or 0)
-    height2 = float(form.get('height2') or 0)
-    length = float(form['length_or_radius'])
-    quantity = int(form['quantity'])
-    degree = float(form.get('degree_or_offset') or 0)
+    try:
+        project_id = int(form['project_id'])
+        duct_no = form['duct_no']
+        duct_type = form['duct_type']
+        factor = float(form.get('factor') or 1.0) if duct_type in ['RED', 'OFFSET', 'SHOE', 'ELB'] else 1.0
 
+        width1 = float(form.get('width1') or 0)
+        height1 = float(form.get('height1') or 0)
+        width2 = float(form.get('width2') or 0)
+        height2 = float(form.get('height2') or 0)
+        length = float(form.get('length_or_radius') or 0)
+        quantity = int(form.get('quantity') or 0)
+        degree = float(form.get('degree_or_offset') or 0)
+
+        if not duct_no or width1 == 0 or height1 == 0 or length == 0 or quantity == 0:
+            flash("Please fill in all required fields.")
+            return redirect(url_for('home', project_id=project_id))
+
+    except Exception as e:
+        flash(f"Invalid input: {e}")
+        return redirect(url_for('home', project_id=form.get('project_id')))
+
+    # Gauge
     if width1 <= 375 and height1 <= 375:
         gauge = '24g'
     elif width1 <= 600 and height1 <= 600:
@@ -135,7 +144,7 @@ def add_duct():
     else:
         gauge = '18g'
 
-    # Area Calculation
+    # Area
     if duct_type == 'ST':
         area = 2 * (width1 + height1) / 1000 * (length / 1000) * quantity
     elif duct_type == 'RED':
@@ -166,7 +175,7 @@ def add_duct():
             UPDATE duct_entries SET project_id=?, duct_no=?, duct_type=?, width1=?, height1=?, width2=?, height2=?,
             length_or_radius=?, quantity=?, degree_or_offset=?, factor=?, gauge=?, area=?, nuts_bolts=?, cleat=?,
             gasket=?, corner_pieces=?, timestamp=? WHERE id=?
-        ''', (project_id, form['duct_no'], duct_type, width1, height1, width2, height2,
+        ''', (project_id, duct_no, duct_type, width1, height1, width2, height2,
               length, quantity, degree, factor, gauge, area, nuts_bolts, cleat, gasket, corner, datetime.now(), id_))
         flash("Duct updated")
     else:
@@ -175,7 +184,7 @@ def add_duct():
             length_or_radius, quantity, degree_or_offset, factor, gauge, area, nuts_bolts, cleat,
             gasket, corner_pieces, timestamp)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ''', (project_id, form['duct_no'], duct_type, width1, height1, width2, height2,
+        ''', (project_id, duct_no, duct_type, width1, height1, width2, height2,
               length, quantity, degree, factor, gauge, area, nuts_bolts, cleat, gasket, corner, datetime.now()))
         flash("Duct added")
 
