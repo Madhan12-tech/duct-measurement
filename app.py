@@ -5,7 +5,6 @@ import pandas as pd
 from io import BytesIO
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import A4
-import traceback
 
 app = Flask(__name__)
 app.secret_key = 'secretkey'
@@ -114,8 +113,6 @@ def add_duct():
     id_ = form.get('id')
 
     try:
-        print("Form Data Received:", dict(form))
-
         project_id = int(form['project_id'])
         duct_no = form['duct_no']
         duct_type = form['duct_type']
@@ -130,70 +127,74 @@ def add_duct():
         degree = float(form.get('degree_or_offset') or 0)
 
         if not duct_no or width1 == 0 or height1 == 0 or length == 0 or quantity == 0:
-            flash("Please fill all required fields.")
+            flash("Please fill in all required fields.")
             return redirect(url_for('home', project_id=project_id))
 
-        if width1 <= 375 and height1 <= 375:
-            gauge = '24g'
-        elif width1 <= 600 and height1 <= 600:
-            gauge = '22g'
-        elif width1 <= 900 and height1 <= 900:
-            gauge = '20g'
-        else:
-            gauge = '18g'
-
-        if duct_type == 'ST':
-            area = 2 * (width1 + height1) / 1000 * (length / 1000) * quantity
-        elif duct_type == 'RED':
-            area = (width1 + height1 + width2 + height2) / 1000 * (length / 1000) * quantity * factor
-        elif duct_type == 'DUM':
-            area = (width1 * height1) / 1_000_000 * quantity
-        elif duct_type == 'OFFSET':
-            area = (width1 + height1 + width2 + height2) / 1000 * ((length + degree) / 1000) * quantity * factor
-        elif duct_type == 'SHOE':
-            area = (width1 + height1) * 2 / 1000 * (length / 1000) * quantity * factor
-        elif duct_type == 'VANES':
-            area = width1 / 1000 * (2 * 3.14 * (width1 / 1000) / 2) / 4 * quantity
-        elif duct_type == 'ELB':
-            area = 2 * (width1 + height1) / 1000 * ((height1 / 2 / 1000) + (length / 1000) * (3.14 * (degree / 180))) * quantity * factor
-        else:
-            area = 0
-
-        nuts_bolts = quantity * 4
-        cleat = quantity * (4 if gauge == '24g' else 8 if gauge == '22g' else 10 if gauge == '20g' else 12)
-        gasket = (width1 + height1 + width2 + height2) / 1000 * quantity
-        corner = 0 if duct_type == 'DUM' else quantity * 8
-
-        conn = sqlite3.connect('data.db')
-        c = conn.cursor()
-
-        if id_:
-            c.execute('''
-                UPDATE duct_entries SET project_id=?, duct_no=?, duct_type=?, width1=?, height1=?, width2=?, height2=?,
-                length_or_radius=?, quantity=?, degree_or_offset=?, factor=?, gauge=?, area=?, nuts_bolts=?, cleat=?,
-                gasket=?, corner_pieces=?, timestamp=? WHERE id=?
-            ''', (project_id, duct_no, duct_type, width1, height1, width2, height2,
-                  length, quantity, degree, factor, gauge, area, nuts_bolts, cleat, gasket, corner, datetime.now(), id_))
-            flash("Duct updated successfully.")
-        else:
-            c.execute('''
-                INSERT INTO duct_entries (project_id, duct_no, duct_type, width1, height1, width2, height2,
-                length_or_radius, quantity, degree_or_offset, factor, gauge, area, nuts_bolts, cleat,
-                gasket, corner_pieces, timestamp)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ''', (project_id, duct_no, duct_type, width1, height1, width2, height2,
-                  length, quantity, degree, factor, gauge, area, nuts_bolts, cleat, gasket, corner, datetime.now()))
-            flash("Duct added successfully.")
-
-        conn.commit()
-        conn.close()
-        return redirect(url_for('home', project_id=project_id))
-
     except Exception as e:
-        print("Error occurred:", e)
-        print(traceback.format_exc())
-        flash(f"Internal Server Error: {str(e)}")
+        flash(f"Invalid input: {e}")
         return redirect(url_for('home', project_id=form.get('project_id')))
+
+    # Gauge logic
+    if width1 <= 375 and height1 <= 375:
+        gauge = '24g'
+    elif width1 <= 600 and height1 <= 600:
+        gauge = '22g'
+    elif width1 <= 900 and height1 <= 900:
+        gauge = '20g'
+    else:
+        gauge = '18g'
+
+    # Area calculation
+    if duct_type == 'ST':
+        area = 2 * (width1 + height1) / 1000 * (length / 1000) * quantity
+    elif duct_type == 'RED':
+        area = (width1 + height1 + width2 + height2) / 1000 * (length / 1000) * quantity * factor
+    elif duct_type == 'DUM':
+        area = (width1 * height1) / 1_000_000 * quantity
+    elif duct_type == 'OFFSET':
+        area = (width1 + height1 + width2 + height2) / 1000 * ((length + degree) / 1000) * quantity * factor
+    elif duct_type == 'SHOE':
+        area = (width1 + height1) * 2 / 1000 * (length / 1000) * quantity * factor
+    elif duct_type == 'VANES':
+        area = width1 / 1000 * (2 * 3.14 * (width1 / 1000) / 2) / 4 * quantity
+    elif duct_type == 'ELB':
+        area = 2 * (width1 + height1) / 1000 * ((height1 / 2 / 1000) + (length / 1000) * (3.14 * (degree / 180))) * quantity * factor
+    else:
+        area = 0
+
+    nuts_bolts = quantity * 4
+    cleat = quantity * (4 if gauge == '24g' else 8 if gauge == '22g' else 10 if gauge == '20g' else 12)
+    gasket = (width1 + height1 + width2 + height2) / 1000 * quantity
+    corner = 0 if duct_type == 'DUM' else quantity * 8
+
+    conn = sqlite3.connect('data.db')
+    c = conn.cursor()
+
+    if id_:
+        c.execute('''
+            UPDATE duct_entries SET project_id=?, duct_no=?, duct_type=?, width1=?, height1=?, width2=?, height2=?,
+            length_or_radius=?, quantity=?, degree_or_offset=?, factor=?, gauge=?, area=?, nuts_bolts=?, cleat=?,
+            gasket=?, corner_pieces=?, timestamp=? WHERE id=?
+        ''', (project_id, duct_no, duct_type, width1, height1, width2, height2,
+              length, quantity, degree, factor, gauge, area, nuts_bolts, cleat, gasket, corner, datetime.now(), id_))
+        flash("Duct updated")
+    else:
+        c.execute('''
+            INSERT INTO duct_entries (
+                project_id, duct_no, duct_type, width1, height1, width2, height2,
+                length_or_radius, quantity, degree_or_offset, factor, gauge, area,
+                nuts_bolts, cleat, gasket, corner_pieces, timestamp
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (
+            project_id, duct_no, duct_type, width1, height1, width2, height2,
+            length, quantity, degree, factor, gauge, area,
+            nuts_bolts, cleat, gasket, corner, datetime.now()
+        ))
+        flash("Duct added")
+
+    conn.commit()
+    conn.close()
+    return redirect(url_for('home', project_id=project_id))
 
 @app.route('/edit/<int:id>')
 def edit_duct(id):
