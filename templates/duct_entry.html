@@ -15,36 +15,17 @@
       background-color: #333;
       border-color: #555;
     }
-
     @media (max-width: 768px) {
-      .row-flex {
-        flex-direction: column;
-      }
-      .form-section, .table-section {
-        width: 100%;
-      }
-      table {
-        font-size: 12px;
-      }
+      .row-flex { flex-direction: column; }
+      .form-section, .table-section { width: 100%; }
+      table { font-size: 12px; }
     }
-
     @media (min-width: 769px) {
-      .row-flex {
-        display: flex;
-        gap: 15px;
-      }
-      .form-section {
-        flex: 1;
-      }
-      .table-section {
-        flex: 2;
-      }
+      .row-flex { display: flex; gap: 15px; }
+      .form-section { flex: 1; }
+      .table-section { flex: 2; }
     }
-
-    th, td {
-      text-align: center;
-      vertical-align: middle;
-    }
+    th, td { text-align: center; vertical-align: middle; }
   </style>
 </head>
 <body>
@@ -97,7 +78,7 @@
             <input type="number" name="quantity" class="form-control" required value="{{ edit_entry[9] if edit_entry else '' }}">
           </div>
 
-          <div class="mb-2"><label>Degree/Offset</label>
+          <div class="mb-2" id="degreeField" style="display: none;"><label>Degree/Offset</label>
             <input type="number" step="0.01" name="degree_or_offset" class="form-control" value="{{ edit_entry[10] if edit_entry else '' }}">
           </div>
 
@@ -183,11 +164,26 @@
 
     function toggleFactorField() {
       const type = document.getElementById("duct_type").value;
-      const factorDiv = document.getElementById("factorField");
-      factorDiv.style.display = ["RED", "OFFSET", "SHOE", "ELB"].includes(type) ? "block" : "none";
+      document.getElementById("factorField").style.display = ["RED", "OFFSET", "SHOE", "ELB"].includes(type) ? "block" : "none";
+      document.getElementById("degreeField").style.display = ["OFFSET", "ELB"].includes(type) ? "block" : "none";
     }
 
-    window.onload = toggleFactorField;
+    function autoCopyDims() {
+      const w1 = document.getElementsByName("width1")[0];
+      const h1 = document.getElementsByName("height1")[0];
+      const w2 = document.getElementsByName("width2")[0];
+      const h2 = document.getElementsByName("height2")[0];
+
+      w1.addEventListener('input', () => { if (!w2.dataset.touched) w2.value = w1.value; });
+      h1.addEventListener('input', () => { if (!h2.dataset.touched) h2.value = h1.value; });
+      w2.addEventListener('input', () => { w2.dataset.touched = true; });
+      h2.addEventListener('input', () => { h2.dataset.touched = true; });
+    }
+
+    window.onload = function () {
+      toggleFactorField();
+      autoCopyDims();
+    };
   </script>
 </body>
 </html>
