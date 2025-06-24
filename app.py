@@ -243,31 +243,104 @@ def delete_duct(id):
 
 @app.route('/export_excel/<int:project_id>')
 def export_excel(project_id):
+    import xlsxwriter
+
     conn = sqlite3.connect('data.db')
     c = conn.cursor()
     c.execute("SELECT * FROM projects WHERE id=?", (project_id,))
     project = c.fetchone()
-    df = pd.read_sql_query("SELECT * FROM duct_entries WHERE project_id=?", conn, params=(project_id,))
+    c.execute("SELECT * FROM duct_entries WHERE project_id=?", (project_id,))
+    entries = c.fetchall()
     conn.close()
 
     output = BytesIO()
-    writer = pd.ExcelWriter(output, engine='openpyxl')
-    project_df = pd.DataFrame([{
-        "Project Name": project[1],
-        "Enquiry No": project[2],
-        "Office No": project[3],
-        "Engineer": project[4],
-        "Contact": project[5],
-        "Location": project[6],
-    }])
-    project_df.to_excel(writer, index=False, sheet_name='Project Info')
-    df.to_excel(writer, index=False, sheet_name='Duct Entries', startrow=5)
-    writer.close()
+    workbook = xlsxwriter.Workbook(output)
+    worksheet = workbook.add_worksheet("Duct Entries")
+
+    bold = workbook.add_format({'bold': True})
+    center = workbook.add_format({'align': 'center'})
+    total_format = workbook.add_format({'bold': True, 'bg_color': '#D9D9D9'})
+
+    # Project Info
+    worksheet.write('A1', 'Project Name', bold)
+    worksheet.write('B1', project[1])
+    worksheet.write('A2', 'Enquiry No', bold)
+    worksheet.write('B2', project[2])
+    worksheet.write('A3', 'Office No', bold)
+    worksheet.write('B3', project[3])
+    worksheet.write('A4', 'Site Engineer', bold)
+    worksheet.write('B4', project[4])
+    worksheet.write('A5', 'Contact', bold)
+    worksheet.write('B5', project[5])
+    worksheet.write('A6', 'Location', bold)
+    worksheet.write('B6', project[6])
+
+    # Table headers (row 8 = index 7)
+    headers = [
+        "Duct No", "Type", "W1", "H1", "W2", "H2", "Len/Rad", "Qty",
+        "Deg/Off", "Factor", "Gauge", "Area", "Nuts", "Cleat", "Gasket", "Corner"
+    ]
+    for col, header in enumerate(headers):
+        worksheet.write(7, col, header, bold)
+
+    # Data rows
+    total_qty = total_area = total_bolts = total_cleat = total_gasket = total_corner = 0
+    row = 8
+    for entry in entries:
+        worksheet.write(row, 0, entry[2])   # Duct No
+        worksheet.write(row, 1, entry[3])   # Type
+        worksheet.write(row, 2, entry[4])   # W1
+        worksheet.write(row, 3, entry[5])   # H1
+        worksheet.write(row, 4, entry[6])   # W2
+        worksheet.write(row, 5, entry[7])   # H2
+        worksheet.write(row, 6, entry[8])   # Length/Radius
+        worksheet.write(row, 7, entry[9])   # Qty
+        worksheet.write(row, 8, entry[10])  # Degree/Offset
+        worksheet.write(row, 9, entry[11])  # Factor
+        worksheet.write(row,10, entry[12])  # Gauge
+        worksheet.write(row,11, entry[13])  # Area
+        worksheet.write(row,12, entry[14])  # Nuts
+        worksheet.write(row,13, entry[15])  # Cleat
+        worksheet.write(row,14, entry[16])  # Gasket
+        worksheet.write(row,15, entry[17])  # Corner
+
+        total_qty += entry[9]
+        total_area += entry[13]
+        total_bolts += entry[14]
+        total_cleat += entry[15]
+        total_gasket += entry[16]
+        total_corner += entry[17]
+        row += 1
+
+    # Totals row
+    worksheet.write(row, 6, 'Total', total_format)
+    worksheet.write(row, 7, total_qty, total_format)
+    worksheet.write(row,11, total_area, total_format)
+    worksheet.write(row,12, total_bolts, total_format)
+    worksheet.write(row,13, total_cleat, total_format)
+    worksheet.write(row,14, total_gasket, total_format)
+    worksheet.write(row,15, total_corner, total_format)
+
+    # Auto column width
+    for i in range(len(headers)):
+        worksheet.set_column(i, i, 12)
+
+    workbook.close()
     output.seek(0)
     return send_file(output, as_attachment=True, download_name='duct_entries.xlsx')
 
+@app.route('/submit_all/<int:project_id>', methods=['POST'])
+def submit_all(project_id):
+    flash("All duct entries submitted successfully!")
+    return redirect(url_for('home', project_id=project_id))
+
 @app.route('/export_pdf/<int:project_id>')
 def export_pdf(project_id):
+    from reportlab.lib import colors
+    from reportlab.lib.pagesizes import A4, landscape
+    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+    from reportlab.lib.styles import getSampleStyleSheet
+
     conn = sqlite3.connect('data.db')
     c = conn.cursor()
     c.execute("SELECT * FROM projects WHERE id=?", (project_id,))
@@ -277,34 +350,69 @@ def export_pdf(project_id):
     conn.close()
 
     buffer = BytesIO()
-    pdf = canvas.Canvas(buffer, pagesize=A4)
-    width, height = A4
-    y = height - 50
-    pdf.setFont("Helvetica-Bold", 12)
-    pdf.drawString(50, y, f"Project: {project[1]}, Enquiry: {project[2]}, Site Engineer: {project[4]}")
-    y -= 30
-    pdf.setFont("Helvetica", 9)
+    doc = SimpleDocTemplate(buffer, pagesize=landscape(A4), rightMargin=30, leftMargin=30, topMargin=30, bottomMargin=30)
 
-    headers = "Duct No, Type, W1, H1, W2, H2, Length, Qty, Degree, Factor, Gauge, Area"
-    pdf.drawString(50, y, headers)
-    y -= 20
+    styles = getSampleStyleSheet()
+    elements = []
+
+    # Project & client info at top
+    project_info = [
+        f"Project Name: {project[1]}",
+        f"Enquiry No: {project[2]}",
+        f"Office No: {project[3]}",
+        f"Site Engineer: {project[4]}",
+        f"Contact: {project[5]}",
+        f"Location: {project[6]}"
+    ]
+    for line in project_info:
+        elements.append(Paragraph(line, styles['Normal']))
+    elements.append(Spacer(1, 12))
+
+    # Table headings
+    table_data = [[
+        "Duct No", "Type", "W1", "H1", "W2", "H2", "Len/Rad", "Qty",
+        "Deg/Off", "Factor", "Gauge", "Area", "Nuts", "Cleat", "Gasket", "Corner"
+    ]]
+
+    # Data rows
+    total_qty = total_area = total_bolts = total_cleat = total_gasket = total_corner = 0
 
     for entry in entries:
-        line = ", ".join([str(entry[i]) for i in range(2, 14)])
-        if y < 50:
-            pdf.showPage()
-            y = height - 50
-        pdf.drawString(50, y, line)
-        y -= 15
+        table_data.append([
+            entry[2], entry[3], entry[4], entry[5], entry[6], entry[7], entry[8], entry[9],
+            entry[10], entry[11], entry[12], f"{entry[13]:.2f}", entry[14],
+            entry[15], f"{entry[16]:.2f}", entry[17]
+        ])
+        total_qty += entry[9]
+        total_area += entry[13]
+        total_bolts += entry[14]
+        total_cleat += entry[15]
+        total_gasket += entry[16]
+        total_corner += entry[17]
 
-    pdf.save()
+    # Totals row
+    table_data.append([
+        "", "", "", "", "", "", "Total", total_qty, "", "", "", f"{total_area:.2f}",
+        total_bolts, total_cleat, f"{total_gasket:.2f}", total_corner
+    ])
+
+    # Build the table
+    table = Table(table_data, repeatRows=1)
+    table.setStyle(TableStyle([
+        ('BACKGROUND', (0,0), (-1,0), colors.grey),
+        ('TEXTCOLOR',(0,0),(-1,0),colors.whitesmoke),
+        ('ALIGN',(0,0),(-1,-1),'CENTER'),
+        ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0,0), (-1,0), 9),
+        ('GRID', (0,0), (-1,-1), 0.5, colors.black),
+        ('BACKGROUND', (0,-1), (-1,-1), colors.lightgrey),
+    ]))
+
+    elements.append(table)
+    doc.build(elements)
     buffer.seek(0)
     return send_file(buffer, as_attachment=True, download_name='duct_entries.pdf')
 
-@app.route('/submit_all/<int:project_id>', methods=['POST'])
-def submit_all(project_id):
-    flash("All duct entries submitted successfully!")
-    return redirect(url_for('home', project_id=project_id))
 
 if __name__ == '__main__':
     app.run(debug=True)
