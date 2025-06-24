@@ -18,39 +18,35 @@
 
     .row-flex {
       display: flex;
-      flex-direction: row;
-      gap: 10px;
-      height: calc(100vh - 80px);
+      flex-wrap: wrap;
     }
     .form-section {
-      width: 10%;
-      overflow-y: auto;
+      flex: 0 0 10%;
+      padding-right: 10px;
+      min-width: 200px;
     }
     .table-section {
-      width: 90%;
+      flex: 0 0 90%;
       overflow-x: auto;
     }
-
     th, td {
       text-align: center;
       vertical-align: middle;
     }
 
-    @media (max-width: 768px) {
-      .row-flex {
-        flex-direction: column;
-      }
-      .form-section, .table-section {
-        width: 100%;
-      }
+    /* Sticky total row */
+    .sticky-total {
+      position: sticky;
+      bottom: 0;
+      background: #eaeaea;
     }
   </style>
 </head>
 <body>
   <div class="container-fluid p-2">
     <div class="d-flex justify-content-between align-items-center mb-2">
-      <h6>Project: {{ project[1] }} | Enquiry: {{ project[2] }} | Site Engineer: {{ project[4] }}</h6>
-      <button class="btn btn-sm btn-secondary" onclick="toggleDarkMode()">Toggle Dark Mode</button>
+      <h6>Project: {{ project[1] }} | Enquiry: {{ project[2] }} | Engineer: {{ project[4] }}</h6>
+      <button class="btn btn-sm btn-dark" onclick="toggleDarkMode()">Dark Mode</button>
     </div>
 
     <div class="row-flex">
@@ -60,143 +56,122 @@
           <input type="hidden" name="project_id" value="{{ project_id }}">
           {% if edit_entry %}<input type="hidden" name="id" value="{{ edit_entry[0] }}">{% endif %}
 
-          <div class="mb-2"><label>Duct No</label>
-            <input type="text" name="duct_no" class="form-control" required value="{{ edit_entry[2] if edit_entry else '' }}">
+          <label>Duct No</label>
+          <input type="text" name="duct_no" class="form-control mb-1" required value="{{ edit_entry[2] if edit_entry else '' }}">
+
+          <label>Type</label>
+          <select class="form-control mb-1" name="duct_type" id="duct_type" onchange="toggleFields()" required>
+            {% for type in ['ST', 'RED', 'DUM', 'OFFSET', 'SHOE', 'VANES', 'ELB'] %}
+              <option value="{{ type }}" {% if edit_entry and edit_entry[3] == type %}selected{% endif %}>{{ type }}</option>
+            {% endfor %}
+          </select>
+
+          <label>W1</label>
+          <input type="number" step="0.01" name="width1" id="width1" class="form-control mb-1" required value="{{ edit_entry[4] if edit_entry else '' }}" oninput="copyW1H1()">
+
+          <label>H1</label>
+          <input type="number" step="0.01" name="height1" id="height1" class="form-control mb-1" required value="{{ edit_entry[5] if edit_entry else '' }}" oninput="copyW1H1()">
+
+          <label>W2</label>
+          <input type="number" step="0.01" name="width2" id="width2" class="form-control mb-1" value="{{ edit_entry[6] if edit_entry else '' }}">
+
+          <label>H2</label>
+          <input type="number" step="0.01" name="height2" id="height2" class="form-control mb-1" value="{{ edit_entry[7] if edit_entry else '' }}">
+
+          <label>Len/Rad</label>
+          <input type="number" step="0.01" name="length_or_radius" class="form-control mb-1" required value="{{ edit_entry[8] if edit_entry else '' }}">
+
+          <label>Qty</label>
+          <input type="number" name="quantity" class="form-control mb-1" required value="{{ edit_entry[9] if edit_entry else '' }}">
+
+          <div id="degreeField">
+            <label>Deg/Off</label>
+            <input type="number" step="0.01" name="degree_or_offset" class="form-control mb-1" value="{{ edit_entry[10] if edit_entry else '' }}">
           </div>
 
-          <div class="mb-2"><label>Duct Type</label>
-            <select class="form-control" name="duct_type" id="duct_type" onchange="toggleFields()" required>
-              {% for type in ['ST', 'RED', 'DUM', 'OFFSET', 'SHOE', 'VANES', 'ELB'] %}
-                <option value="{{ type }}" {% if edit_entry and edit_entry[3] == type %}selected{% endif %}>{{ type }}</option>
-              {% endfor %}
-            </select>
+          <div id="factorField" style="display:none;">
+            <label>Factor</label>
+            <input type="number" step="0.1" name="factor" class="form-control mb-1" value="{{ edit_entry[11] if edit_entry else 1.5 }}">
           </div>
 
-          <div class="mb-2"><label>Width1</label>
-            <input type="number" step="0.01" name="width1" id="width1" class="form-control" required value="{{ edit_entry[4] if edit_entry else '' }}">
-          </div>
-
-          <div class="mb-2"><label>Height1</label>
-            <input type="number" step="0.01" name="height1" id="height1" class="form-control" required value="{{ edit_entry[5] if edit_entry else '' }}">
-          </div>
-
-          <div class="mb-2"><label>Width2</label>
-            <input type="number" step="0.01" name="width2" id="width2" class="form-control" value="{{ edit_entry[6] if edit_entry else '' }}">
-          </div>
-
-          <div class="mb-2"><label>Height2</label>
-            <input type="number" step="0.01" name="height2" id="height2" class="form-control" value="{{ edit_entry[7] if edit_entry else '' }}">
-          </div>
-
-          <div class="mb-2"><label>Length/Radius</label>
-            <input type="number" step="0.01" name="length_or_radius" class="form-control" required value="{{ edit_entry[8] if edit_entry else '' }}">
-          </div>
-
-          <div class="mb-2"><label>Quantity</label>
-            <input type="number" name="quantity" class="form-control" required value="{{ edit_entry[9] if edit_entry else '' }}">
-          </div>
-
-          <div class="mb-2" id="degreeField"><label>Degree/Offset</label>
-            <input type="number" step="0.01" name="degree_or_offset" class="form-control" value="{{ edit_entry[10] if edit_entry else '' }}">
-          </div>
-
-          <div class="mb-2" id="factorField" style="display: none;"><label>Factor</label>
-            <input type="number" step="0.1" name="factor" class="form-control" value="{{ edit_entry[11] if edit_entry else 1.5 }}">
-          </div>
-
-          <button type="submit" class="btn btn-primary mt-2 w-100">{{ 'Update' if edit_entry else 'Add' }}</button>
+          <button type="submit" class="btn btn-primary w-100 mt-1">{{ 'Update' if edit_entry else 'Add' }}</button>
         </form>
 
         {% with messages = get_flashed_messages() %}
           {% if messages %}
-            <div class="alert alert-info mt-2">{{ messages[0] }}</div>
+            <div class="alert alert-success mt-2">{{ messages[0] }}</div>
           {% endif %}
         {% endwith %}
+
+        <form action="{{ url_for('submit_all', project_id=project_id) }}" method="POST">
+          <button class="btn btn-success w-100 mt-2">Submit All</button>
+        </form>
       </div>
 
       <!-- Right: Table -->
       <div class="table-section">
-        <div class="d-flex justify-content-end gap-2 mb-2">
+        <div class="d-flex justify-content-end mb-2 gap-2">
           <a href="{{ url_for('export_excel', project_id=project_id) }}" class="btn btn-success btn-sm">Excel</a>
           <a href="{{ url_for('export_pdf', project_id=project_id) }}" class="btn btn-danger btn-sm">PDF</a>
-          <button class="btn btn-outline-primary btn-sm" onclick="window.print()">Print</button>
+          <button onclick="window.print()" class="btn btn-outline-secondary btn-sm">Print</button>
         </div>
 
         <table class="table table-bordered table-sm">
-          <thead class="table-light">
+          <thead class="table-light sticky-top">
             <tr>
               <th>#</th><th>Duct No</th><th>Type</th><th>W1</th><th>H1</th><th>W2</th><th>H2</th>
-              <th>Len/Rad</th><th>Qty</th><th>Deg/Off</th><th>Gauge</th><th>Area</th><th>Nuts</th>
-              <th>Cleat</th><th>Gasket</th><th>Corner</th><th>Actions</th>
+              <th>Len/Rad</th><th>Qty</th><th>Deg/Off</th><th style="display:none;">Factor</th><th>Gauge</th>
+              <th>Area</th><th>Nuts</th><th>Cleat</th><th>Gasket</th><th>Corner</th><th>Action</th>
             </tr>
           </thead>
           <tbody>
             {% for entry in entries %}
             <tr>
               <td>{{ loop.index }}</td>
-              <td>{{ entry[2] }}</td>
-              <td>{{ entry[3] }}</td>
-              <td>{{ entry[4] }}</td>
-              <td>{{ entry[5] }}</td>
-              <td>{{ entry[6] }}</td>
-              <td>{{ entry[7] }}</td>
-              <td>{{ entry[8] }}</td>
-              <td>{{ entry[9] }}</td>
-              <td>{{ entry[10] }}</td>
-              <td>{{ entry[12] }}</td>
-              <td>{{ '%.2f'|format(entry[13]) }}</td>
-              <td>{{ entry[14] }}</td>
-              <td>{{ entry[15] }}</td>
-              <td>{{ '%.2f'|format(entry[16]) }}</td>
-              <td>{{ entry[17] }}</td>
+              <td>{{ entry[2] }}</td><td>{{ entry[3] }}</td><td>{{ entry[4] }}</td><td>{{ entry[5] }}</td>
+              <td>{{ entry[6] }}</td><td>{{ entry[7] }}</td><td>{{ entry[8] }}</td><td>{{ entry[9] }}</td>
+              <td>{{ entry[10] }}</td><td style="display:none;">{{ entry[11] }}</td><td>{{ entry[12] }}</td>
+              <td>{{ '%.2f'|format(entry[13]) }}</td><td>{{ entry[14] }}</td><td>{{ entry[15] }}</td>
+              <td>{{ '%.2f'|format(entry[16]) }}</td><td>{{ entry[17] }}</td>
               <td>
-                <a href="{{ url_for('edit_duct', id=entry[0]) }}" class="btn btn-sm btn-warning">Edit</a>
-                <a href="{{ url_for('delete_duct', id=entry[0]) }}" class="btn btn-sm btn-danger" onclick="return confirm('Delete this entry?')">Delete</a>
+                <a href="{{ url_for('edit_duct', id=entry[0]) }}" class="btn btn-warning btn-sm">Edit</a>
+                <a href="{{ url_for('delete_duct', id=entry[0]) }}" onclick="return confirm('Delete this entry?')" class="btn btn-danger btn-sm">Delete</a>
               </td>
             </tr>
             {% endfor %}
-            <tr class="table-secondary fw-bold">
+            <tr class="sticky-total fw-bold">
               <td colspan="8">Total</td>
-              <td>{{ total_qty }}</td>
-              <td colspan="1"></td>
-              <td></td>
+              <td>{{ total_qty }}</td><td colspan="2"></td><td></td>
               <td>{{ '%.2f'|format(total_area) }}</td>
-              <td>{{ total_bolts }}</td>
-              <td>{{ total_cleat }}</td>
-              <td>{{ '%.2f'|format(total_gasket) }}</td>
-              <td>{{ total_corner }}</td>
-              <td></td>
+              <td>{{ total_bolts }}</td><td>{{ total_cleat }}</td>
+              <td>{{ '%.2f'|format(total_gasket) }}</td><td>{{ total_corner }}</td><td></td>
             </tr>
           </tbody>
         </table>
-
-        <form method="POST" action="{{ url_for('submit_all', project_id=project_id) }}" class="mt-2 text-end">
-          <button type="submit" class="btn btn-primary">Submit All</button>
-        </form>
       </div>
     </div>
   </div>
 
   <script>
     function toggleDarkMode() {
-      document.body.classList.toggle("dark-mode");
+      document.body.classList.toggle('dark-mode');
     }
 
     function toggleFields() {
-      const type = document.getElementById("duct_type").value;
-      document.getElementById("factorField").style.display = ["RED", "OFFSET", "SHOE", "ELB"].includes(type) ? "block" : "none";
-      document.getElementById("degreeField").style.display = ["OFFSET", "ELB"].includes(type) ? "block" : "none";
+      const type = document.getElementById('duct_type').value;
+      document.getElementById('factorField').style.display = ['RED','OFFSET','SHOE','ELB'].includes(type) ? 'block' : 'none';
+      document.getElementById('degreeField').style.display = ['OFFSET','ELB'].includes(type) ? 'block' : 'none';
     }
 
-    document.getElementById("width1").addEventListener("input", function () {
-      document.getElementById("width2").value = this.value;
-    });
-
-    document.getElementById("height1").addEventListener("input", function () {
-      document.getElementById("height2").value = this.value;
-    });
+    function copyW1H1() {
+      const w1 = document.getElementById("width1").value;
+      const h1 = document.getElementById("height1").value;
+      if (!document.getElementById("width2").value) document.getElementById("width2").value = w1;
+      if (!document.getElementById("height2").value) document.getElementById("height2").value = h1;
+    }
 
     window.onload = toggleFields;
   </script>
 </body>
 </html>
+
