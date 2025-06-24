@@ -164,7 +164,7 @@ def add_duct():
             length_or_radius=?, quantity=?, degree_or_offset=?, factor=?, gauge=?, area=?, nuts_bolts=?, cleat=?,
             gasket=?, corner_pieces=?, timestamp=? WHERE id=?
         ''', (project_id, duct_no, duct_type, width1, height1, width2, height2,
-              length, quantity, degree, factor, gauge, area, bolts, cleat, gasket, corner, datetime.now(), id_))
+              length, quantity, degree, factor, gauge, area, nuts_bolts, cleat, gasket, corner, datetime.now(), id_))
         flash("Duct updated")
     else:
         c.execute('''
@@ -173,7 +173,7 @@ def add_duct():
             gasket, corner_pieces, timestamp)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ''', (project_id, duct_no, duct_type, width1, height1, width2, height2,
-              length, quantity, degree, factor, gauge, area, bolts, cleat, gasket, corner, datetime.now()))
+              length, quantity, degree, factor, gauge, area, nuts_bolts, cleat, gasket, corner, datetime.now()))
         flash("Duct added")
 
     conn.commit()
