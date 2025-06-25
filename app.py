@@ -134,15 +134,17 @@ def add_duct():
         flash(f"Invalid input: {e}")
         return redirect(url_for('home', project_id=form.get('project_id')))
 
-    # Gauge logic (individual check)
-    if width1 <= 375 and height1 <= 375:
+    # Corrected gauge logic: check both width1 and height1 ranges
+    if 0 <= width1 <= 751 and 0 <= height1 <= 751:
         gauge = '24g'
-    elif width1 <= 600 and height1 <= 600:
+    elif 751 < width1 <= 1201 and 751 < height1 <= 1201:
         gauge = '22g'
-    elif width1 <= 900 and height1 <= 900:
+    elif 1201 < width1 <= 1800 and 1201 < height1 <= 1800:
         gauge = '20g'
-    else:
+    elif width1 > 1800 and height1 > 1800:
         gauge = '18g'
+    else:
+        gauge = '18g'  # default fallback
 
     # Area logic
     if duct_type == 'ST':
