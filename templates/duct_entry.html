@@ -40,11 +40,9 @@
       }
       .form-section {
         flex: 1;
-        width: 10%;
       }
       .table-section {
         flex: 9;
-        width: 90%;
       }
     }
   </style>
@@ -133,8 +131,7 @@
           <thead class="table-light sticky-top">
             <tr>
               <th>#</th><th>Duct</th><th>Type</th><th>W1</th><th>H1</th><th>W2</th><th>H2</th><th>Len</th>
-              <th>Qty</th><th>Deg/Off</th><!-- <th>Factor</th> -->
-              <th>Gauge</th><th>Area</th><th>Nuts</th>
+              <th>Qty</th><th>Deg/Off</th><th>Gauge</th><th>Area</th><th>Nuts</th>
               <th>Cleat</th><th>Gasket</th><th>Corner</th><th>Actions</th>
             </tr>
           </thead>
@@ -151,7 +148,6 @@
               <td>{{ entry[8] }}</td>
               <td>{{ entry[9] }}</td>
               <td>{{ entry[10] }}</td>
-              <!-- <td>{{ entry[11] }}</td> -->
               <td>{{ entry[12] }}</td>
               <td>{{ '%.2f'|format(entry[13]) }}</td>
               <td>{{ entry[14] }}</td>
@@ -164,7 +160,8 @@
               </td>
             </tr>
             {% endfor %}
-            <!-- Sticky Total Row -->
+
+            <!-- Total Row -->
             <tr class="sticky-total fw-bold">
               <td colspan="8">Total</td>
               <td>{{ total_qty }}</td>
@@ -177,6 +174,29 @@
               <td>{{ total_corner }}</td>
               <td></td>
             </tr>
+
+            <!-- Area by Gauge Rows -->
+            <tr class="table-info fw-bold">
+              <td colspan="11" class="text-end">Area - 24g</td>
+              <td colspan="2">{{ '%.2f' | format(area_24g) }}</td>
+              <td colspan="3"></td>
+            </tr>
+            <tr class="table-info fw-bold">
+              <td colspan="11" class="text-end">Area - 22g</td>
+              <td colspan="2">{{ '%.2f' | format(area_22g) }}</td>
+              <td colspan="3"></td>
+            </tr>
+            <tr class="table-info fw-bold">
+              <td colspan="11" class="text-end">Area - 20g</td>
+              <td colspan="2">{{ '%.2f' | format(area_20g) }}</td>
+              <td colspan="3"></td>
+            </tr>
+            <tr class="table-info fw-bold">
+              <td colspan="11" class="text-end">Area - 18g</td>
+              <td colspan="2">{{ '%.2f' | format(area_18g) }}</td>
+              <td colspan="3"></td>
+            </tr>
+
           </tbody>
         </table>
         </div>
