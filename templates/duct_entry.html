@@ -40,9 +40,11 @@
       }
       .form-section {
         flex: 1;
+        width: 10%;
       }
       .table-section {
         flex: 9;
+        width: 90%;
       }
     }
   </style>
@@ -55,7 +57,7 @@
     </div>
 
     <div class="row-flex">
-      <!-- Left Form -->
+      <!-- Form -->
       <div class="form-section">
         <form method="POST" action="{{ url_for('add_duct') }}">
           <input type="hidden" name="project_id" value="{{ project_id }}">
@@ -115,7 +117,7 @@
         {% endwith %}
       </div>
 
-      <!-- Right Table -->
+      <!-- Table -->
       <div class="table-section">
         <div class="d-flex justify-content-end mb-2 gap-2">
           <a href="{{ url_for('export_excel', project_id=project_id) }}" class="btn btn-success btn-sm">Excel</a>
@@ -127,78 +129,57 @@
         </div>
 
         <div style="overflow-x:auto;">
-        <table class="table table-bordered table-sm">
-          <thead class="table-light sticky-top">
-            <tr>
-              <th>#</th><th>Duct</th><th>Type</th><th>W1</th><th>H1</th><th>W2</th><th>H2</th><th>Len</th>
-              <th>Qty</th><th>Deg/Off</th><th>Gauge</th><th>Area</th><th>Nuts</th>
-              <th>Cleat</th><th>Gasket</th><th>Corner</th><th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for entry in entries %}
-            <tr>
-              <td>{{ loop.index }}</td>
-              <td>{{ entry[2] }}</td>
-              <td>{{ entry[3] }}</td>
-              <td>{{ entry[4] }}</td>
-              <td>{{ entry[5] }}</td>
-              <td>{{ entry[6] }}</td>
-              <td>{{ entry[7] }}</td>
-              <td>{{ entry[8] }}</td>
-              <td>{{ entry[9] }}</td>
-              <td>{{ entry[10] }}</td>
-              <td>{{ entry[12] }}</td>
-              <td>{{ '%.2f'|format(entry[13]) }}</td>
-              <td>{{ entry[14] }}</td>
-              <td>{{ entry[15] }}</td>
-              <td>{{ '%.2f'|format(entry[16]) }}</td>
-              <td>{{ entry[17] }}</td>
-              <td>
-                <a href="{{ url_for('edit_duct', id=entry[0]) }}" class="btn btn-sm btn-warning">Edit</a>
-                <a href="{{ url_for('delete_duct', id=entry[0]) }}" class="btn btn-sm btn-danger" onclick="return confirm('Delete this entry?')">Delete</a>
-              </td>
-            </tr>
-            {% endfor %}
-
-            <!-- Total Row -->
-            <tr class="sticky-total fw-bold">
-              <td colspan="8">Total</td>
-              <td>{{ total_qty }}</td>
-              <td colspan="1"></td>
-              <td></td>
-              <td>{{ '%.2f'|format(total_area) }}</td>
-              <td>{{ total_bolts }}</td>
-              <td>{{ total_cleat }}</td>
-              <td>{{ '%.2f'|format(total_gasket) }}</td>
-              <td>{{ total_corner }}</td>
-              <td></td>
-            </tr>
-
-            <!-- Area by Gauge Rows -->
-            <tr class="table-info fw-bold">
-              <td colspan="11" class="text-end">Area - 24g</td>
-              <td colspan="2">{{ '%.2f' | format(area_24g) }}</td>
-              <td colspan="3"></td>
-            </tr>
-            <tr class="table-info fw-bold">
-              <td colspan="11" class="text-end">Area - 22g</td>
-              <td colspan="2">{{ '%.2f' | format(area_22g) }}</td>
-              <td colspan="3"></td>
-            </tr>
-            <tr class="table-info fw-bold">
-              <td colspan="11" class="text-end">Area - 20g</td>
-              <td colspan="2">{{ '%.2f' | format(area_20g) }}</td>
-              <td colspan="3"></td>
-            </tr>
-            <tr class="table-info fw-bold">
-              <td colspan="11" class="text-end">Area - 18g</td>
-              <td colspan="2">{{ '%.2f' | format(area_18g) }}</td>
-              <td colspan="3"></td>
-            </tr>
-
-          </tbody>
-        </table>
+          <table class="table table-bordered table-sm">
+            <thead class="table-light sticky-top">
+              <tr>
+                <th>#</th><th>Duct</th><th>Type</th><th>W1</th><th>H1</th><th>W2</th><th>H2</th><th>Len</th>
+                <th>Qty</th><th>Deg/Off</th><th>Gauge</th>
+                <th>24g</th><th>22g</th><th>20g</th><th>18g</th>
+                <th>Nuts</th><th>Cleat</th><th>Gasket</th><th>Corner</th><th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for entry in entries %}
+              <tr>
+                <td>{{ loop.index }}</td>
+                <td>{{ entry[2] }}</td>
+                <td>{{ entry[3] }}</td>
+                <td>{{ entry[4] }}</td>
+                <td>{{ entry[5] }}</td>
+                <td>{{ entry[6] }}</td>
+                <td>{{ entry[7] }}</td>
+                <td>{{ entry[8] }}</td>
+                <td>{{ entry[9] }}</td>
+                <td>{{ entry[10] }}</td>
+                <td>{{ entry[12] }}</td>
+                <td>{{ '%.2f'|format(entry[13]) if entry[12] == '24g' else '0.00' }}</td>
+                <td>{{ '%.2f'|format(entry[13]) if entry[12] == '22g' else '0.00' }}</td>
+                <td>{{ '%.2f'|format(entry[13]) if entry[12] == '20g' else '0.00' }}</td>
+                <td>{{ '%.2f'|format(entry[13]) if entry[12] == '18g' else '0.00' }}</td>
+                <td>{{ entry[14] }}</td>
+                <td>{{ entry[15] }}</td>
+                <td>{{ '%.2f'|format(entry[16]) }}</td>
+                <td>{{ entry[17] }}</td>
+                <td>
+                  <a href="{{ url_for('edit_duct', id=entry[0]) }}" class="btn btn-sm btn-warning">Edit</a>
+                  <a href="{{ url_for('delete_duct', id=entry[0]) }}" class="btn btn-sm btn-danger" onclick="return confirm('Delete this entry?')">Delete</a>
+                </td>
+              </tr>
+              {% endfor %}
+              <tr class="sticky-total fw-bold">
+                <td colspan="11">Total</td>
+                <td>{{ '%.2f'|format(area_24g) }}</td>
+                <td>{{ '%.2f'|format(area_22g) }}</td>
+                <td>{{ '%.2f'|format(area_20g) }}</td>
+                <td>{{ '%.2f'|format(area_18g) }}</td>
+                <td>{{ total_bolts }}</td>
+                <td>{{ total_cleat }}</td>
+                <td>{{ '%.2f'|format(total_gasket) }}</td>
+                <td>{{ total_corner }}</td>
+                <td></td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
