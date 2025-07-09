@@ -40,46 +40,70 @@
   <div class="row">
     <div class="col-md-6 form-section">
       <form method="POST" action="{{ url_for('add_duct') }}">
-        <input type="hidden" name="project_id" value="{{ project_id }}">
-        {% if edit_entry %}
-          <input type="hidden" name="id" value="{{ edit_entry[0] }}">
-        {% endif %}
+  <input type="hidden" name="project_id" value="{{ project_id }}">
+  {% if edit_entry %}
+    <input type="hidden" name="id" value="{{ edit_entry[0] }}">
+  {% endif %}
 
-        <div class="mb-2">
-          <label>Duct No</label>
-          <input name="duct_no" value="{{ edit_entry[2] if edit_entry else '' }}" class="form-control" required>
-        </div>
+  <div class="mb-2">
+    <label>Duct No</label>
+    <input name="duct_no" value="{{ edit_entry[2] if edit_entry else '' }}" class="form-control" required>
+  </div>
 
-        <div class="mb-2">
-          <label>Type</label>
-          <select name="duct_type" class="form-control" required>
-            {% for type in ['ST', 'RED', 'OFFSET', 'DUM', 'ELB', 'SHOE', 'VANES'] %}
-              <option value="{{ type }}" {% if edit_entry and edit_entry[3]==type %}selected{% endif %}>{{ type }}</option>
-            {% endfor %}
-          </select>
-        </div>
+  <div class="mb-2">
+    <label>Type</label>
+    <select name="duct_type" class="form-control" required>
+      {% for type in ['ST', 'RED', 'OFFSET', 'DUM', 'ELB', 'SHOE', 'VANES'] %}
+        <option value="{{ type }}" {% if edit_entry and edit_entry[3]==type %}selected{% endif %}>{{ type }}</option>
+      {% endfor %}
+    </select>
+  </div>
 
-        <div class="row">
-          <div class="col mb-2"><label>W1</label><input name="width1" type="number" step="any" value="{{ edit_entry[4] if edit_entry else '' }}" class="form-control"></div>
-          <div class="col mb-2"><label>H1</label><input name="height1" type="number" step="any" value="{{ edit_entry[5] if edit_entry else '' }}" class="form-control"></div>
-        </div>
+  <div class="row">
+    <div class="col mb-2">
+      <label>W1</label>
+      <input name="width1" type="number" step="any" value="{{ edit_entry[4] if edit_entry else '' }}" class="form-control">
+    </div>
+    <div class="col mb-2">
+      <label>H1</label>
+      <input name="height1" type="number" step="any" value="{{ edit_entry[5] if edit_entry else '' }}" class="form-control">
+    </div>
+  </div>
 
-        <div class="row">
-          <div class="col mb-2"><label>W2</label><input name="width2" type="number" step="any" value="{{ edit_entry[6] if edit_entry else '' }}" class="form-control"></div>
-          <div class="col mb-2"><label>H2</label><input name="height2" type="number" step="any" value="{{ edit_entry[7] if edit_entry else '' }}" class="form-control"></div>
-        </div>
+  <div class="row">
+    <div class="col mb-2">
+      <label>W2</label>
+      <input name="width2" type="number" step="any" value="{{ edit_entry[6] if edit_entry else '' }}" class="form-control">
+    </div>
+    <div class="col mb-2">
+      <label>H2</label>
+      <input name="height2" type="number" step="any" value="{{ edit_entry[7] if edit_entry else '' }}" class="form-control">
+    </div>
+  </div>
 
-        <div class="row">
-          <div class="col mb-2"><label>Length/Radius</label><input name="length_or_radius" type="number" step="any" value="{{ edit_entry[8] if edit_entry else '' }}" class="form-control"></div>
-          <div class="col mb-2"><label>Qty</label><input name="quantity" type="number" step="1" value="{{ edit_entry[9] if edit_entry else '' }}" class="form-control"></div>
-        </div>
+  <div class="row">
+    <div class="col mb-2">
+      <label>Length/Radius</label>
+      <input name="length_or_radius" type="number" step="any" value="{{ edit_entry[8] if edit_entry else '' }}" class="form-control">
+    </div>
+    <div class="col mb-2">
+      <label>Qty</label>
+      <input name="quantity" type="number" step="1" value="{{ edit_entry[9] if edit_entry else '' }}" class="form-control">
+    </div>
+  </div>
 
-        <div class="row">
-          <div class="col mb-2"><label>Deg/Offset</label><input name="degree_or_offset" type="number" step="any" value="{{ edit_entry[10] if edit_entry else '' }}" class="form-control"></div>
-          <div class="col mb-2"><label>Factor</label><input name="factor" type="number" step="any" value="{{ edit_entry[11] if edit_entry else '1.0' }}" class="form-control"></div>
-        </div>
+  <div class="row">
+    <div class="col mb-2">
+      <label>Deg/Offset</label>
+      <input name="degree_or_offset" type="number" step="any" value="{{ edit_entry[10] if edit_entry else '' }}" class="form-control">
+    </div>
+    <div class="col mb-2">
+      <label>Factor</label>
+      <input name="factor" type="number" step="any" value="{{ edit_entry[11] if edit_entry else '1.0' }}" class="form-control">
+    </div>
+  </div>
 
-        <button class="btn btn-primary w-100 mt-2">💾 Save Entry</button>
+  <button class="btn btn-primary w-100 mt-2">💾 Save Entry</button>
       </form>
     </div>
 
